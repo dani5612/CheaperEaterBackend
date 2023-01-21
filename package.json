@@ -1,23 +1,24 @@
 {
-    "name": "backend",
-    "version": "1.0.0",
-    "description": "",
-    "main": "index.js",
-    "scripts": {
-        "lint": "eslint . --ext .mjs,.js,.jsx,.ts,.tsx,.json"
-    },
-    "author": "",
-    "license": "ISC",
-    "dependencies": {
-        "cors": "^2.8.5",
-        "dotenv": "^16.0.3",
-        "express": "^4.18.2",
-        "mongodb": "^4.12.1"
-    },
-    "devDependencies": {
-        "eslint": "^8.32.0",
-        "eslint-config-prettier": "^8.6.0",
-        "eslint-plugin-json": "^3.1.0",
-        "prettier": "2.8.3"
-    }
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint . --ext .mjs,.js,.jsx,.ts,.tsx,.json"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "mongodb": "^4.12.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.32.0",
+    "eslint-config-prettier": "^8.6.0",
+    "eslint-plugin-json": "^3.1.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "prettier": "2.8.3"
+  }
 }
