@@ -18,12 +18,12 @@ jobs:
               uses: github/super-linter@v4
               env:
                   #VALIDATE_ALL_CODEBASE: false
+                  LOG_LEVEL: TRACE
                   DEFAULT_BRANCH: main
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   JAVASCRIPT_DEFAULT_STYLE: standard/prettier
                   LINTER_RULES_PATH: /
                   JAVASCRIPT_ES_CONFIG_FILE: .eslintrc.json
-                  VALIDATE_JAVASCRIPT_ES: true
     build:
         runs-on: ubuntu-latest
         steps:
