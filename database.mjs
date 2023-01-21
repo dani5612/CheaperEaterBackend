@@ -1,7 +1,9 @@
 import { MongoClient } from "mongodb";
+import { env } from "node:process";
+
 import "dotenv/config";
 
-const client = new MongoClient(process.env.MONGO_URI);
+const client = new MongoClient(env.MONGO_URI);
 const getDB = async () => {
     try {
         const connection = await client.connect();
