@@ -1,5 +1,4 @@
-// testing lint error - no unuser vars
-import express, { response } from "express";
+import express from "express";
 import { insertOne, find } from "../api/db.mjs";
 
 const router = express.Router();
