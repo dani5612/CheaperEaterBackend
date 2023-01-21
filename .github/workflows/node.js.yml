@@ -16,6 +16,6 @@ jobs:
               with:
                   node-version: "19.X"
                   cache: "npm"
-            - run: eslint . --ext .mjs,.js,.jsx,.ts,.tsx
+            - run: eslint . --ext .mjs,.js,.jsx,.ts,.tsx,.json
             - run: npm ci
             #- run: npm test
