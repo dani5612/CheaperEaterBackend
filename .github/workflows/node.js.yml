@@ -7,23 +7,6 @@ on:
         branches: ["main"]
 
 jobs:
-    lint:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout Code
-              uses: actions/checkout@v3
-              with:
-                  fetch-depth: 0
-            - name: Lint Code Base
-              uses: github/super-linter@v4
-              env:
-                  #VALIDATE_ALL_CODEBASE: false
-                  LOG_LEVEL: TRACE
-                  DEFAULT_BRANCH: main
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  JAVASCRIPT_DEFAULT_STYLE: standard/prettier
-                  LINTER_RULES_PATH: /
-                  JAVASCRIPT_ES_CONFIG_FILE: .eslintrc.json
     build:
         runs-on: ubuntu-latest
         steps:
@@ -33,5 +16,6 @@ jobs:
               with:
                   node-version: "19.X"
                   cache: "npm"
+            - run: eslint . --ext .mjs,.js,.jsx,.ts,.tsx
             - run: npm ci
             #- run: npm test
