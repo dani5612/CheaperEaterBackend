@@ -1,5 +1,5 @@
 import { MongoClient } from "mongodb";
-import { env } from "node:process";
+import { env, exec } from "node:process";
 
 import "dotenv/config";
 
