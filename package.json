@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node index.mjs",
     "lint": "eslint . --ext .mjs,.js,.jsx,.ts,.tsx,.json"
   },
   "author": "",
