@@ -1,7 +1,16 @@
 import express from "express";
 import { insertOne, find } from "../api/db.mjs";
+import { search } from "../api/search.mjs";
 
 const router = express.Router();
+
+router.get("/search", async (req, res) => {
+  try {
+    res.json(await search(req.body));
+  } catch (e) {
+    console.error(e);
+  }
+});
 
 router.get("/db/get/", async (req, res) => {
   try {
