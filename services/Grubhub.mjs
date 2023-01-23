@@ -93,7 +93,7 @@ class Grubhub extends Service {
    * @param {String} query the query to search
    * @return {Object} the search result or HTTPResponseError
    */
-  async search(query) {
+  async search({ query, location }) {
     //const authData = await auth((await getToken()).refreshToken);
     // check if token is expired
     let tokenData = await this.getToken();
@@ -109,23 +109,41 @@ class Grubhub extends Service {
       }
     }
 
-    const res = await fetch(
-      `https://api-gtm.grubhub.com/restaurants/search?orderMethod=delivery&locationMode=DELIVERY&facetSet=umamiV6&pageSize=20&hideHateos=true&searchMetrics=true&queryText=${query}&location=POINT(-118.12718201%2034.09533691)&preciseLocation=true&geohash=9q5czyy7tpky&includeOffers=true&sortSetId=umamiv3&sponsoredSize=3&countOmittingTimes=true`,
-      {
-        method: "GET",
-        headers: {
-          "content-type": "application/json",
-          // unknow if this auth ever expires
-          "x-px-authorization":
-            "2:eyJ1IjoiODgxM2JlMzYtOWFhNC0xMWVkLTljZGQtODdmNmFiNTMyYWYyIiwidiI6IjI1MWM2MmM4LTMwOWUtMTFlZC04M2VlLTZhNDk0ZDU5NmQ0NCIsInQiOjE2NzQ0MjcxOTY3ODksImgiOiI4NTM3ZTY0MmNiN2Y0ZTQ5NzExNDRiNzY1ZTFjYWU0YjY5ZGZhNTg2YzQ5M2E0MGE0MjljY2Q4YzAyODY2ZGI2In0=",
-          accept: "*/*",
-          authorization: `Bearer ${tokenData.accessToken}`,
-          "accept-language": "en-us",
-          "user-agent": "GrubHub/2022.32 (iPhone; iOS 13.3.1; Scale/3.00)",
-          vary: "Accept-Encoding",
-        },
-      }
-    );
+    let endpoint = new URL("https://api-gtm.grubhub.com/restaurants/search");
+    const params = new URLSearchParams({
+      orderMethod: "delivery",
+      locationMode: "DELIVERY",
+      facetSet: "umamiV6",
+      pageSize: 20,
+      hideHateos: true,
+      searchMetrics: true,
+      queryText: query,
+      location: `POINT(${location.latitude} ${location.longitude})`,
+      preciseLocation: true,
+      //geohash: "9q5czyy7tpky", // does not seem to be required
+      includeOffers: true,
+      sortSetId: "umamiv3",
+      sponsoredSize: 3,
+      countOmittingTimes: true,
+    });
+
+    endpoint.search = params;
+    console.log(endpoint.toString());
+
+    const res = await fetch(endpoint.toString(), {
+      method: "GET",
+      headers: {
+        "content-type": "application/json",
+        // unknow if this auth ever expires
+        "x-px-authorization":
+          "2:eyJ1IjoiODgxM2JlMzYtOWFhNC0xMWVkLTljZGQtODdmNmFiNTMyYWYyIiwidiI6IjI1MWM2MmM4LTMwOWUtMTFlZC04M2VlLTZhNDk0ZDU5NmQ0NCIsInQiOjE2NzQ0MjcxOTY3ODksImgiOiI4NTM3ZTY0MmNiN2Y0ZTQ5NzExNDRiNzY1ZTFjYWU0YjY5ZGZhNTg2YzQ5M2E0MGE0MjljY2Q4YzAyODY2ZGI2In0=",
+        accept: "*/*",
+        authorization: `Bearer ${tokenData.accessToken}`,
+        "accept-language": "en-us",
+        "user-agent": "GrubHub/2022.32 (iPhone; iOS 13.3.1; Scale/3.00)",
+        vary: "Accept-Encoding",
+      },
+    });
 
     if (res.ok) {
       return await res.json();

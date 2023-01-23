@@ -7,11 +7,11 @@ import { HTTPResponseError } from "../errors/http.mjs";
  * @param {string} query the query to search from (ex:pizza, mcdonalds)
  * @return {object} either a stores object or error
  */
-const searchPostmates = async (query) => {
+const searchPostmates = async (searchData) => {
   try {
     const postmates = new Postmates();
     return {
-      stores: (await postmates.search(query)).data.feedItems.map(
+      stores: (await postmates.search(searchData)).data.feedItems.map(
         ({ store: { storeUuid, title, mapMarker, meta, rating, image } }) => {
           const firstImage = image.items[0];
           let deliveryInfo = {};
@@ -51,11 +51,11 @@ const searchPostmates = async (query) => {
  * @param {string} query the query to search from (ex:pizza, mcdonalds)
  * @return {object} either a stores object or error
  */
-const searchGrubhub = async (query) => {
+const searchGrubhub = async (searchData) => {
   try {
     const grubHub = new Grubhub();
     return {
-      stores: (await grubHub.search(query)).search_result.results.map(
+      stores: (await grubHub.search(searchData)).search_result.results.map(
         ({
           restaurant_id,
           ratings,
@@ -91,13 +91,12 @@ const searchGrubhub = async (query) => {
  * @param {string} query the query to search from (ex:pizza, mcdonalds)
  * @return {object} either a stores object or error
  */
-
-const searchDoordash = async (query) => {
+const searchDoordash = async (searchData) => {
   try {
     const doordash = new Doordash();
     return {
       stores: (
-        await doordash.search(query)
+        await doordash.search(searchData)
       ).data.searchWithFilterFacetFeed.body[0].body.map(({ logging }) => {
         const data = JSON.parse(logging);
         const {
@@ -131,15 +130,16 @@ const searchDoordash = async (query) => {
 };
 
 /* Seach all delivery services
- * @param {string} query the query to search from (ex:pizza, mcdonalds)
+ * @param {Object} searchData containing the search parameters
+ * ex: {query: "", location: {longitude: 0, latitude: 0}}
  * @return {array} an array of service objects
  */
-const search = async ({ query }) => {
+const search = async (searchData) => {
   const services = ["postmates", "grubhub", "doordash"];
   const serviceSearchData = await Promise.all([
-    searchPostmates(query),
-    searchGrubhub(query),
-    searchDoordash(query),
+    searchPostmates(searchData),
+    searchGrubhub(searchData),
+    searchDoordash(searchData),
   ]);
 
   return services.map((service, index) => ({

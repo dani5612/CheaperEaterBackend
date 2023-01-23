@@ -1,8 +1,8 @@
 # REST API
 
 Things to know:
-- For responses `...` indicates there are more results not shown to simplify output.
-- For responses the data is filler data, 0 means the data is of type `Number` while `""` means
+- For responses, `...` is not valid JSON, it indicates there are more results not shown to simplify output.
+- For responses, the data is filler data, 0 means the data is of type `Number` while `""` means
   the data is of type `String`.
 - Since Uber aquired Postmates, the API data seems to be the same for both. A search using both
   websites while monitoring the network tab in Chrome dev tools show the API enpoints have the
@@ -14,17 +14,20 @@ Things to know:
 ### Usage example
 ```javascript
 const options = {
-  method: 'GET',
+  method: "GET",
   headers: {
-    'Content-Type': 'application/json'
+    "Content-Type": "application/json",
   },
-  body: '{"query":"pizza"}'
+  body: JSON.stringify({
+    query: "pizza",
+    location: { longitude: 34.09533691, latitude: -118.12718201 },
+  }),
 };
 
-fetch('localhost:8000/api/search', options)
-  .then(response => response.json())
-  .then(response => console.log(response))
-  .catch(err => console.error(err));
+fetch("localhost:8000/api/search", options)
+  .then((response) => response.json())
+  .then((response) => console.log(response))
+  .catch((err) => console.error(err));
 ```
 
 ### Response example
@@ -81,3 +84,9 @@ fetch('localhost:8000/api/search', options)
     I'm assuming that the setLocation API might be using a session token to
     keep track of the location in their backend. I also tried making the calls
     using the same cookie without success. Need to investigate further.
+- The following maps the supported JSON search parameters to each service. As APIs
+  continue to be developed, more parameters will be supported
+    - query:
+      - Postmates, Grubhub, DoorDash
+    - location:
+      - Grubhub

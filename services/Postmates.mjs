@@ -11,7 +11,7 @@ class Postmates extends Service {
    * @param {String} query the query to search
    * @return {Object} the search result or HTTPResponseError
    */
-  async search(query) {
+  async search({ query }) {
     const res = await fetch("https://postmates.com/api/getFeedV1", {
       method: "POST",
       headers: {

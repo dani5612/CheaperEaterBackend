@@ -16,7 +16,7 @@ class Doordash extends Service {
    * @param {String} query the query to search
    * @return {Object} the search result or HTTPResponseError
    */
-  async search(query) {
+  async search({ query }) {
     const res = await fetch(
       "https://www.doordash.com/graphql?operation=searchWithFilterFacetFeed",
       {
