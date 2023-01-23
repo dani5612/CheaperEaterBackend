@@ -1,6 +1,6 @@
-import { search as postmatesSearch } from "../services/postmates.mjs";
-import { search as grubhubSearch } from "../services/grubhub.mjs";
-import { search as doordashSearch } from "../services/doordash.mjs";
+import Postmates from "../services/Postmates.mjs";
+import Grubhub from "../services/Grubhub.mjs";
+import Doordash from "../services/Doordash.mjs";
 import { HTTPResponseError } from "../errors/http.mjs";
 
 /* Seairch postmates
@@ -9,8 +9,9 @@ import { HTTPResponseError } from "../errors/http.mjs";
  */
 const searchPostmates = async (query) => {
   try {
+    const postmates = new Postmates();
     return {
-      stores: (await postmatesSearch(query)).data.feedItems.map(
+      stores: (await postmates.search(query)).data.feedItems.map(
         ({ store: { storeUuid, title, mapMarker, meta, rating, image } }) => {
           const firstImage = image.items[0];
           let deliveryInfo = {};
@@ -52,8 +53,9 @@ const searchPostmates = async (query) => {
  */
 const searchGrubhub = async (query) => {
   try {
+    const grubHub = new Grubhub();
     return {
-      stores: (await grubhubSearch(query)).search_result.results.map(
+      stores: (await grubHub.search(query)).search_result.results.map(
         ({
           restaurant_id,
           ratings,
@@ -89,12 +91,13 @@ const searchGrubhub = async (query) => {
  * @param {string} query the query to search from (ex:pizza, mcdonalds)
  * @return {object} either a stores object or error
  */
+
 const searchDoordash = async (query) => {
   try {
-    //console.log(await doordashSearch(query));
+    const doordash = new Doordash();
     return {
       stores: (
-        await doordashSearch(query)
+        await doordash.search(query)
       ).data.searchWithFilterFacetFeed.body[0].body.map(({ logging }) => {
         const data = JSON.parse(logging);
         const {
@@ -132,17 +135,17 @@ const searchDoordash = async (query) => {
  * @return {array} an array of service objects
  */
 const search = async ({ query }) => {
-  return [
-    {
-      service: "postmates",
-      ...(await searchPostmates(query)),
-    },
-    {
-      service: "grubhub",
-      ...(await searchGrubhub(query)),
-    },
-    { service: "doordash", ...(await searchDoordash(query)) },
-  ];
+  const services = ["postmates", "grubhub", "doordash"];
+  const serviceSearchData = await Promise.all([
+    searchPostmates(query),
+    searchGrubhub(query),
+    searchDoordash(query),
+  ]);
+
+  return services.map((service, index) => ({
+    service: service,
+    ...serviceSearchData[index],
+  }));
 };
 
 export { search };
