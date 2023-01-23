@@ -51,7 +51,6 @@ class Doordash extends Service {
    * @return {Object} newly create token data
    */
   async createNewToken() {
-    console.log("creating new token");
     const password = "988E4CDA-7367-4F00-BA57-493244C49226";
     const res = await fetch(
       "https://consumer-mobile-bff.doordash.com/v1/consumer_profile/create_full_guest",
@@ -91,7 +90,6 @@ class Doordash extends Service {
    */
   async search({ query, location }) {
     const tokenData = await this.getToken();
-    console.log(tokenData.accessToken);
 
     let endpoint = new URL(
       "https://consumer-mobile-bff.doordash.com/v3/search"
