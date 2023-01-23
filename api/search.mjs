@@ -3,7 +3,7 @@ import Grubhub from "../services/Grubhub.mjs";
 import Doordash from "../services/Doordash.mjs";
 import { HTTPResponseError } from "../errors/http.mjs";
 
-/* Seairch postmates
+/* Search postmates
  * @param {string} query the query to search from (ex:pizza, mcdonalds)
  * @return {object} either a stores object or error
  */
@@ -87,10 +87,50 @@ const searchGrubhub = async (searchData) => {
   }
 };
 
-/* Search doordash
+/* Search doordash mobile API
  * @param {string} query the query to search from (ex:pizza, mcdonalds)
  * @return {object} either a stores object or error
  */
+const searchDoordash = async (searchData) => {
+  try {
+    const doordash = new Doordash();
+    return {
+      stores: (await doordash.search(searchData)).body.map(
+        ({
+          logging: { store_id },
+          text,
+          images: {
+            main: { uri },
+          },
+          custom,
+        }) => ({
+          id: store_id,
+          title: text.title,
+          deliveryFee: +text.custom.modality_display_string
+            .split(" ")[0]
+            .replace("$", ""),
+          estimatedDeliverytime: +text.custom.eta_display_string.split(" ")[0],
+          rating: custom?.rating?.average_rating
+            ? custom.rating.average_rating
+            : null,
+          image: uri,
+        })
+      ),
+    };
+  } catch (e) {
+    if (e instanceof HTTPResponseError) {
+      return { error: await e.getError() };
+    } else {
+      console.error(e);
+    }
+  }
+};
+
+/* Search doordash web API, depricated over mobile API
+ * @param {string} query the query to search from (ex:pizza, mcdonalds)
+ * @return {object} either a stores object or error
+ */
+/*
 const searchDoordash = async (searchData) => {
   try {
     const doordash = new Doordash();
@@ -128,6 +168,7 @@ const searchDoordash = async (searchData) => {
     }
   }
 };
+*/
 
 /* Seach all delivery services
  * @param {Object} searchData containing the search parameters

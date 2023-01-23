@@ -7,44 +7,119 @@ class Doordash extends Service {
     super();
     this.service = "doordash";
   }
-  /* location\
-  (1) autocomplete api -> get location + google place id
-  (2) use geoplace id to set location
-*/
+
+  /*Parse token data from API response
+   * @param {Object} data the API reponse from getting token info
+   * @return {Object} parased token data
+   */
+  parseTokenData(data) {
+    const { token, refresh_token } = data.token;
+    return { accessToken: token, refreshToken: refresh_token };
+  }
+
+  async auth({ email, password }) {
+    const res = await fetch("https://identity.doordash.com/api/v1/auth/token", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        tracestate: "@nr=0-2-0-0-db1a24ed9488394c--0--1674456258902",
+        accept: "application/json",
+        authorization:
+          "FuOLnL6SwVUAAAAAAAAAAF7whaV0MUbFAAAAAAAAAACUHvuFj9PQQAAAAAAAAAAA",
+        "accept-language": "en-us",
+        "user-agent": "DoorDash/30357.210623 CFNetwork/1121.2.2 Darwin/19.3.0",
+      },
+      body: JSON.stringify({
+        credentials: {
+          email: email,
+          password: password,
+        },
+      }),
+    });
+
+    if (res.ok) {
+      return await res.json();
+    } else {
+      throw new HTTPResponseError(res);
+    }
+  }
+
+  /* Create a new token, this method should only be called
+   * if valid token data does not already exists in the database.
+   * if you want to get a token to use, getToken() should be used
+   * instead.
+   * @return {Object} newly create token data
+   */
+  async createNewToken() {
+    console.log("creating new token");
+    const password = "988E4CDA-7367-4F00-BA57-493244C49226";
+    const res = await fetch(
+      "https://consumer-mobile-bff.doordash.com/v1/consumer_profile/create_full_guest",
+      {
+        method: "POST",
+        headers: {
+          "client-version": "ios v4.41.2 b30357.210623",
+          "user-agent":
+            "DoordashConsumer/4.41.2 (iPhone; iOS 13.3.1; Scale/3.0)",
+          "x-experience-id": "doordash",
+          "x-support-delivery-fee-sort": "true",
+          "x-support-partner-dashpass": "true",
+          "x-ios-bundle-identifier": "doordash.DoorDashConsumer",
+          "x-support-nested-menu": "true",
+          "x-support-schedule-save": "true",
+          "accept-language": "en-US;q=1.0, es-MX;q=0.9",
+          accept: "application/json",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          password: password,
+        }),
+      }
+    );
+    //const tokenData = this.parseTokenData(await res.json());
+    const { email } = await res.json();
+    const tokenData = this.parseTokenData(
+      await this.auth({ email: email, password: password })
+    );
+    await this.updateToken(tokenData);
+    return tokenData;
+  }
 
   /* Search query
    * @param {String} query the query to search
    * @return {Object} the search result or HTTPResponseError
    */
-  async search({ query }) {
-    const res = await fetch(
-      "https://www.doordash.com/graphql?operation=searchWithFilterFacetFeed",
-      {
-        method: "POST",
-        headers: {
-          authority: "www.doordash.com",
-          "Content-Type": "application/json",
-          accept: "*/*",
-          "accept-language": "en-US,en;q=0.6",
-          "apollographql-client-name":
-            "@doordash/app-consumer-production-ssr-client",
-          "apollographql-client-version": "2.2",
-          origin: "https://www.doordash.com",
-          referer:
-            "https://www.doordash.com/search/store/chicken/?event_type=search",
-          "sec-fetch-dest": "empty",
-          "sec-fetch-mode": "cors",
-          "sec-fetch-site": "same-origin",
-          "sec-gpc": "1",
-          "user-agent":
-            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
-          "x-channel-id": "marketplace",
-          "x-csrftoken": "",
-          "x-experience-id": "doordash",
-        },
-        body: `{"variables":{"cursor":"","filterQuery":"","query":"${query}","displayHeader":true,"isDebug":false},"operationName":"searchWithFilterFacetFeed","query":"query searchWithFilterFacetFeed($cursor: String, $filterQuery: String, $query: String!, $isDebug: Boolean) {   searchWithFilterFacetFeed(cursor: $cursor, filterQuery: $filterQuery, query: $query, isDebug: $isDebug) {     ...FacetFeedV2ResultFragment     __typename   } }  fragment FacetFeedV2ResultFragment on FacetFeedV2Result {   body {     id     header {       ...FacetV2Fragment       __typename     }     body {       ...FacetV2Fragment       __typename     }     layout {       omitFooter       __typename     }     __typename   }   page {     ...FacetV2PageFragment     __typename   }   header {     ...FacetV2Fragment     __typename   }   custom   logging   __typename }  fragment FacetV2Fragment on FacetV2 {   ...FacetV2BaseFragment   childrenMap {     ...FacetV2BaseFragment     __typename   }   __typename }  fragment FacetV2BaseFragment on FacetV2 {   id   childrenCount   component {     ...FacetV2ComponentFragment     __typename   }   name   text {     ...FacetV2TextFragment     __typename   }   images {     main {       ...FacetV2ImageFragment       __typename     }     icon {       ...FacetV2ImageFragment       __typename     }     background {       ...FacetV2ImageFragment       __typename     }     accessory {       ...FacetV2ImageFragment       __typename     }     custom {       key       value {         ...FacetV2ImageFragment         __typename       }       __typename     }     __typename   }   events {     click {       name       data       __typename     }     __typename   }   style {     spacing     background_color     border {       color       width       __typename     }     __typename   }   layout {     omitFooter     gridSpecs {       Mobile {         ...FacetV2LayoutGridFragment         __typename       }       Phablet {         ...FacetV2LayoutGridFragment         __typename       }       Tablet {         ...FacetV2LayoutGridFragment         __typename       }       Desktop {         ...FacetV2LayoutGridFragment         __typename       }       WideScreen {         ...FacetV2LayoutGridFragment         __typename       }       UltraWideScreen {         ...FacetV2LayoutGridFragment         __typename       }       __typename     }     dlsPadding {       top       right       bottom       left       __typename     }     __typename   }   custom   logging   __typename }  fragment FacetV2ComponentFragment on FacetV2Component {   id   category   __typename }  fragment FacetV2TextFragment on FacetV2Text {   title   titleTextAttributes {     textStyle     textColor     __typename   }   subtitle   subtitleTextAttributes {     textStyle     textColor     __typename   }   accessory   accessoryTextAttributes {     textStyle     textColor     __typename   }   description   descriptionTextAttributes {     textStyle     textColor     __typename   }   custom {     key     value     __typename   }   __typename }  fragment FacetV2ImageFragment on FacetV2Image {   uri   placeholder   local   style   logging   events {     click {       name       data       __typename     }     __typename   }   __typename }  fragment FacetV2LayoutGridFragment on FacetV2LayoutGrid {   interRowSpacing   interColumnSpacing   minDimensionCount   __typename }  fragment FacetV2PageFragment on FacetV2Page {   next {     name     data     __typename   }   onLoad {     name     data     __typename   }   __typename } "}`,
-      }
+  async search({ query, location }) {
+    const tokenData = await this.getToken();
+    console.log(tokenData.accessToken);
+
+    let endpoint = new URL(
+      "https://consumer-mobile-bff.doordash.com/v3/search"
     );
+    const params = new URLSearchParams({
+      query: query,
+      lat: location.latitude,
+      lng: location.longitude,
+    });
+
+    endpoint.search = params;
+
+    const res = await fetch(endpoint.toString(), {
+      method: "GET",
+      headers: {
+        "client-version": "ios v4.41.2 b30357.210623",
+        "user-agent": "DoordashConsumer/4.41.2 (iPhone; iOS 13.3.1; Scale/3.0)",
+        "x-experience-id": "doordash",
+        "x-support-delivery-fee-sort": "true",
+        "x-support-partner-dashpass": "true",
+        "x-ios-bundle-identifier": "doordash.DoorDashConsumer",
+        "x-support-nested-menu": "true",
+        "x-support-schedule-save": "true",
+        authorization: `JWT ${tokenData.accessToken}`,
+        "accept-language": "en-US;q=1.0, es-MX;q=0.9",
+        accept: "*/*",
+      },
+    });
 
     if (res.ok) {
       return await res.json();

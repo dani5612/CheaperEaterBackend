@@ -9,6 +9,10 @@ class Grubhub extends Service {
     this.client_id = "ghiphone_Vkuxbs6t0f4SZjTOW42Y52z1itJ7Li0Tw3FEcboT";
   }
 
+  /*Parse token data from API response
+   * @param {Object} data the API reponse from getting token info
+   * @return {Object} parased token data
+   */
   parseTokenData(data) {
     const {
       access_token,
@@ -29,7 +33,7 @@ class Grubhub extends Service {
    * if valid token data does not already exists in the database.
    * if you want to get a token to use, getToken() should be used
    * instead.
-   * @return {null}
+   * @return {Object} newly create token data
    */
   async createNewToken() {
     const res = await fetch("https://api-gtm.grubhub.com/auth", {
@@ -128,7 +132,6 @@ class Grubhub extends Service {
     });
 
     endpoint.search = params;
-    console.log(endpoint.toString());
 
     const res = await fetch(endpoint.toString(), {
       method: "GET",
