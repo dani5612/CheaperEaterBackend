@@ -6,7 +6,7 @@ class Grubhub extends Service {
   constructor() {
     super();
     this.service = "grubhub";
-    this.client_id = "ghiphone_Vkuxbs6t0f4SZjTOW42Y52z1itJ7Li0Tw3FEcboT";
+    this.clientId = "ghiphone_Vkuxbs6t0f4SZjTOW42Y52z1itJ7Li0Tw3FEcboT";
   }
 
   /*Parse token data from API response
@@ -49,7 +49,7 @@ class Grubhub extends Service {
       },
       body: JSON.stringify({
         brand: "GRUBHUB",
-        client_id: this.client_id,
+        client_id: this.clientId,
         scope: "anonymous",
       }),
     });
@@ -73,7 +73,7 @@ class Grubhub extends Service {
           "2:eyJ1IjoiMWVkZTg0OTYtMzE2My0xMWVkLWIyMmUtZTMxZDAwZjEwM2Q3IiwidiI6IjI1MWM2MmM4LTMwOWUtMTFlZC04M2VlLTZhNDk0ZDU5NmQ0NCIsInQiOjE2NjI4NTQyMzExMTUsImgiOiI1MDU0NDNkZmZhN2ZlMzlmMGEwODVhNTczZmFmNTMzMWY4MTAxOGVkMGU3NWEwMjY5YmNjNjQxNDk0NjZiMjU3In0=",
       },
       body: JSON.stringify({
-        client_id: this.client_id,
+        client_id: this.clientId,
         scope: "anonymous",
         brand: "GRUBHUB",
         refresh_token: refreshToken,
