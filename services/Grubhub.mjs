@@ -56,6 +56,10 @@ class Grubhub extends Service {
     return await this.updateToken(this.parseTokenData(await res.json()));
   }
 
+  /* Refresh authentication tokens and store new token data in database
+   * @param {String} refreshToken the refresh token used to get new tokens
+   * @return {Object} the object containing the new token data
+   */
   async refreshAuth(refreshToken) {
     const res = await fetch("https://api-gtm.grubhub.com/auth/refresh", {
       method: "POST",
@@ -85,6 +89,10 @@ class Grubhub extends Service {
     return tokenData;
   }
 
+  /*Checks if tokens are valid using database experitation times
+   *@return {Object} boolean values indicating the validity of both the refresh
+   * and access tokens
+   */
   areTokensValid({ refreshTokenExpireTime, accessTokenExpireTime }) {
     const today = new Date().getTime();
     return {
@@ -122,7 +130,7 @@ class Grubhub extends Service {
       hideHateos: true,
       searchMetrics: true,
       queryText: query,
-      location: `POINT(${location.latitude} ${location.longitude})`,
+      location: `POINT(${location.longitude} ${location.latitude})`,
       preciseLocation: true,
       //geohash: "9q5czyy7tpky", // does not seem to be required
       includeOffers: true,

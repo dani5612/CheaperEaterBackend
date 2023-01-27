@@ -11,8 +11,11 @@
 5. Setup env variables
     - in your command line, navigate to the project directory you cloned
     - in the root of the project, create a file `.env`
-    - in the `.env` file add a line `MONGO_URI=mongodb+srv://cheapereater:<password>@cheapereater.t9lwwta.mongodb.net`
-      replacing `<password>` with the shared password found in our discord credentials channel
+    - in the `.env` file add the following lines
+      `MONGO_URI=mongodb+srv://cheapereater:<password>@cheapereater.t9lwwta.mongodb.net`
+      `DOORDASH_DEFAULT_AUTH_TOKEN=<token>`
+      `DOMAIN=<domain>`
+    - the values for the env variables can be found the the Discord's credential's channel
 5. Build and run:
     - in your command line, run `npm install` to install all of the project dependencies
     - run with `npm run start`
