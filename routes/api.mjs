@@ -8,12 +8,12 @@ import { setLocation } from "../api/set.mjs";
 const router = express.Router();
 
 router.post("/set/location", async (req, res) => {
-  res.setHeader("Set-Cookie", await setLocation(req.body.locationDetails));
+  res.setHeader("Set-Cookie", await setLocation(req.body));
   res.send();
 });
 
 router.get("/detail/location", async (req, res) => {
-  res.json(await detailLocation(req.body.locationData));
+  res.json(await detailLocation(req.body));
 });
 
 router.get("/autocomplete/location", async (req, res) => {

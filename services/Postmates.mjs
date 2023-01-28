@@ -118,8 +118,6 @@ class Postmates extends Service {
     if (res.ok) {
       return this.replaceCookieDomain(res.headers.raw()["set-cookie"]);
     } else {
-      console.log("Err");
-      console.log(res);
       throw new HTTPResponseError(res);
     }
   }

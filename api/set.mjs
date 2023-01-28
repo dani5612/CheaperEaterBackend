@@ -8,7 +8,6 @@ import { HTTPResponseError } from "../errors/http.mjs";
 const setLocation = async (locationDetails) => {
   try {
     const postmates = new Postmates();
-    console.log(locationDetails);
     return await postmates.setLocation(locationDetails);
   } catch (e) {
     if (e instanceof HTTPResponseError) {
