@@ -12,7 +12,7 @@
     - in your command line, navigate to the project directory you cloned
     - in the root of the project, create a file `.env`
     - in the `.env` file add the following lines
-      `MONGO_URI=mongodb+srv://cheapereater:<password>@cheapereater.t9lwwta.mongodb.net`
+      `MONGO_URI=mongodb+srv://cheapereater:<password>@<mongo_domain>`
       `DOORDASH_DEFAULT_AUTH_TOKEN=<token>`
       `DOMAIN=<domain>`
     - the values for the env variables can be found the the Discord's credential's channel
