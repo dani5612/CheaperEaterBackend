@@ -124,6 +124,7 @@ class Postmates extends Service {
 
   /* Search query
    * @param {String} query the query to search
+   * @param {Object} cookies containing location data
    * @return {Object} the search result or HTTPResponseError
    */
   async search({ query, cookies }) {
