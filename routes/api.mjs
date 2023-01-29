@@ -21,15 +21,19 @@ router.post("/autocomplete/location", async (req, res) => {
 });
 
 router.post("/search", async (req, res) => {
-  const requestCookies = req.cookies;
-  if (requestCookies["uev2.loc"] === undefined) {
-    res.status(400);
-    res.json({ error: "missing location data cookie, set location first." })
-      .end;
+  try {
+    const requestCookies = req.cookies;
+    if (requestCookies["uev2.loc"] === undefined) {
+      res.status(400);
+      res.json({ error: "missing location data cookie, set location first." })
+        .end;
+    }
+    const { data, responseCookies } = await search(req.body, requestCookies);
+    res.setHeader("Set-Cookie", responseCookies);
+    res.json(data);
+  } catch (e) {
+    console.error(e);
   }
-  const { data, responseCookies } = await search(req.body, requestCookies);
-  res.setHeader("Set-Cookie", responseCookies);
-  res.json(data);
 });
 
 router.get("/db/get/", async (req, res) => {
