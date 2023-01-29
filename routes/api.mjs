@@ -12,15 +12,15 @@ router.post("/set/location", async (req, res) => {
   res.send();
 });
 
-router.get("/detail/location", async (req, res) => {
+router.post("/detail/location", async (req, res) => {
   res.json(await detailLocation(req.body));
 });
 
-router.get("/autocomplete/location", async (req, res) => {
+router.post("/autocomplete/location", async (req, res) => {
   res.json(await autocompleteLocation(req.body.query));
 });
 
-router.get("/search", async (req, res) => {
+router.post("/search", async (req, res) => {
   const requestCookies = req.cookies;
   if (requestCookies["uev2.loc"] === undefined) {
     res.status(400);
