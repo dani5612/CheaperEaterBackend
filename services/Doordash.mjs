@@ -1,6 +1,9 @@
+import { env } from "node:process";
 import fetch from "node-fetch";
 import { HTTPResponseError } from "../errors/http.mjs";
 import Service from "./Service.mjs";
+
+import "dotenv/config";
 
 class Doordash extends Service {
   constructor() {
@@ -18,14 +21,13 @@ class Doordash extends Service {
   }
 
   async auth({ email, password }) {
+    console.log("auth");
     const res = await fetch("https://identity.doordash.com/api/v1/auth/token", {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        tracestate: "@nr=0-2-0-0-db1a24ed9488394c--0--1674456258902",
         accept: "application/json",
-        authorization:
-          "FuOLnL6SwVUAAAAAAAAAAF7whaV0MUbFAAAAAAAAAACUHvuFj9PQQAAAAAAAAAAA",
+        authorization: env.DOORDASH_DEFAULT_AUTH_TOKEN,
         "accept-language": "en-us",
         "user-agent": "DoorDash/30357.210623 CFNetwork/1121.2.2 Darwin/19.3.0",
       },
@@ -51,7 +53,8 @@ class Doordash extends Service {
    * @return {Object} newly create token data
    */
   async createNewToken() {
-    const password = "988E4CDA-7367-4F00-BA57-493244C49226";
+    console.log("creating new token");
+    const password = "c27cf79d-2a03-4265-aa2c-cbe68c29cf00";
     const res = await fetch(
       "https://consumer-mobile-bff.doordash.com/v1/consumer_profile/create_full_guest",
       {
@@ -75,13 +78,17 @@ class Doordash extends Service {
         }),
       }
     );
-    //const tokenData = this.parseTokenData(await res.json());
-    const { email } = await res.json();
-    const tokenData = this.parseTokenData(
-      await this.auth({ email: email, password: password })
-    );
-    await this.updateToken(tokenData);
-    return tokenData;
+    if (res.ok) {
+      const { email } = await res.json();
+      console.log(email);
+      const tokenData = this.parseTokenData(
+        await this.auth({ email: email, password: password })
+      );
+      await this.updateToken(tokenData);
+      return tokenData;
+    } else {
+      throw new HTTPResponseError(res);
+    }
   }
 
   /* Search query
