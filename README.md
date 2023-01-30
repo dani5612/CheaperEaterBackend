@@ -11,7 +11,7 @@
 5. Setup env variables
     - navigate to the project directory you cloned
     - in the root of the project, create a plain text file called `.env`
-    - in the `.env` file add the following lines
+    - in the `.env` file you just created, add the following lines
       `MONGO_URI=mongodb+srv://cheapereater:<password>@<mongo_domain>`
       `DOORDASH_DEFAULT_AUTH_TOKEN=<token>`
       `DOMAIN=<domain>`
