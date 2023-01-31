@@ -14,8 +14,12 @@
     - in the `.env` file you just created, add the following lines
       ```
       MONGO_URI=mongodb+srv://cheapereater:<password>@<mongo_domain>
-      DOORDASH_DEFAULT_AUTH_TOKEN=<token>
       DOMAIN=<domain>
+      DOORDASH_DEFAULT_AUTH_TOKEN=<token>
+      DOORDASH_GUEST_EMAIL=<email>
+      DOORDASH_GUEST_PASSWORD=<password>
+      GRUBHUB_CLIENT_ID=<id>
+      GRUBHUB_XPS_TOKEN=<token>
       ```
     - the values for the env variables can be found the the Discord's credential's channel
 5. Build and run:
