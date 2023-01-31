@@ -1,9 +1,10 @@
 import { env } from "node:process";
+import { v4 as uuidv4 } from "uuid";
+import jwt_decode from "jwt-decode";
 import fetch from "node-fetch";
+
 import { HTTPResponseError } from "../errors/http.mjs";
 import Service from "./Service.mjs";
-
-import "dotenv/config";
 
 class Doordash extends Service {
   constructor() {
@@ -17,9 +18,18 @@ class Doordash extends Service {
    */
   parseTokenData(data) {
     const { token, refresh_token } = data.token;
-    return { accessToken: token, refreshToken: refresh_token };
+    return {
+      accessToken: token,
+      refreshToken: refresh_token,
+      accessTokenExpireTime: jwt_decode(token).exp * 1000,
+    };
   }
 
+  /*Retrieve a new accesss token and refresh token using the email and password of an account
+   * @param {String} email
+   * @param {String} pasword
+   * @return {Object} auth token data
+   */
   async auth({ email, password }) {
     console.log("auth");
     const res = await fetch("https://identity.doordash.com/api/v1/auth/token", {
@@ -46,15 +56,53 @@ class Doordash extends Service {
     }
   }
 
-  /* Create a new token, this method should only be called
+  /* Create a new token using credentials for an existing account.
+   * By default, guest account info in env file is used.
+   * This method should only be called if valid token data does
+   * not already exists in the database. If you want to get a token
+   * to use, getToken() should be used instead.
+   * @param {Object} credentials containing email and password of account
+   * @return {Object} newly create token data
+   */
+  async createNewToken(
+    credentials = {
+      email: env.DOORDASH_GUEST_EMAIL,
+      password: env.DOORDASH_GUEST_PASSWORD,
+    }
+  ) {
+    const res = await fetch("https://identity.doordash.com/api/v1/auth/token", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json",
+        authorization: env.DOORDASH_DEFAULT_AUTH_TOKEN,
+        "accept-language": "en-us",
+        "user-agent": "DoorDash/27397.210527 CFNetwork/1121.2.2 Darwin/19.3.0",
+      },
+      body: JSON.stringify({ credentials: credentials }),
+    });
+
+    if (res.ok) {
+      const tokenData = this.parseTokenData(await res.json());
+      console.log("token data:");
+      console.log(tokenData);
+      await this.updateToken(tokenData);
+      return tokenData;
+    } else {
+      throw new HTTPResponseError(res);
+    }
+  }
+
+  /* Create a new token using a new account. Note that this method needs more work.
+   * and is not yet complete. It looks like accounts created with the method do not have the
+   * necessary permissions. This method should only be called
    * if valid token data does not already exists in the database.
    * if you want to get a token to use, getToken() should be used
    * instead.
    * @return {Object} newly create token data
    */
-  async createNewToken() {
-    console.log("creating new token");
-    const password = "c27cf79d-2a03-4265-aa2c-cbe68c29cf00";
+  async createNewTokenWithNewAccount() {
+    const password = uuidv4();
     const res = await fetch(
       "https://consumer-mobile-bff.doordash.com/v1/consumer_profile/create_full_guest",
       {
@@ -96,7 +144,12 @@ class Doordash extends Service {
    * @return {Object} the search result or HTTPResponseError
    */
   async search({ query, location }) {
-    const tokenData = await this.getToken();
+    let tokenData = await this.getToken();
+    const { accessTokenIsValid } = this.areTokensValid(tokenData);
+
+    if (!accessTokenIsValid) {
+      tokenData = this.createNewToken();
+    }
 
     let endpoint = new URL(
       "https://consumer-mobile-bff.doordash.com/v3/search"

@@ -1,4 +1,6 @@
+import { env } from "node:process";
 import fetch from "node-fetch";
+
 import { HTTPResponseError } from "../errors/http.mjs";
 import Service from "./Service.mjs";
 
@@ -6,7 +8,7 @@ class Grubhub extends Service {
   constructor() {
     super();
     this.service = "grubhub";
-    this.clientId = "ghiphone_Vkuxbs6t0f4SZjTOW42Y52z1itJ7Li0Tw3FEcboT";
+    this.clientId = env.GRUBHUB_CLIENT_ID;
   }
 
   /*Parse token data from API response
@@ -73,8 +75,7 @@ class Grubhub extends Service {
         "x-px-authorization": "4",
         "x-px-bypass-reason":
           "An%20SSL%20error%20has%20occurred%20and%20a%20secure%20connection%20to%20the%20server%20cannot%20be%20made.",
-        "x-px-original-token":
-          "2:eyJ1IjoiMWVkZTg0OTYtMzE2My0xMWVkLWIyMmUtZTMxZDAwZjEwM2Q3IiwidiI6IjI1MWM2MmM4LTMwOWUtMTFlZC04M2VlLTZhNDk0ZDU5NmQ0NCIsInQiOjE2NjI4NTQyMzExMTUsImgiOiI1MDU0NDNkZmZhN2ZlMzlmMGEwODVhNTczZmFmNTMzMWY4MTAxOGVkMGU3NWEwMjY5YmNjNjQxNDk0NjZiMjU3In0=",
+        "x-px-original-token": env.GRUBHUB_XPX_TOKEN,
       },
       body: JSON.stringify({
         client_id: this.clientId,
@@ -87,18 +88,6 @@ class Grubhub extends Service {
     const tokenData = this.parseTokenData(await res.json());
     await this.updateToken(tokenData);
     return tokenData;
-  }
-
-  /*Checks if tokens are valid using database experitation times
-   *@return {Object} boolean values indicating the validity of both the refresh
-   * and access tokens
-   */
-  areTokensValid({ refreshTokenExpireTime, accessTokenExpireTime }) {
-    const today = new Date().getTime();
-    return {
-      refreshTokenIsValid: today < refreshTokenExpireTime,
-      accessTokenIsValid: today < accessTokenExpireTime,
-    };
   }
 
   /* Search query
@@ -132,7 +121,6 @@ class Grubhub extends Service {
       queryText: query,
       location: `POINT(${location.longitude} ${location.latitude})`,
       preciseLocation: true,
-      //geohash: "9q5czyy7tpky", // does not seem to be required
       includeOffers: true,
       sortSetId: "umamiv3",
       sponsoredSize: 3,
@@ -145,9 +133,7 @@ class Grubhub extends Service {
       method: "GET",
       headers: {
         "content-type": "application/json",
-        // unknow if this auth ever expires
-        "x-px-authorization":
-          "2:eyJ1IjoiODgxM2JlMzYtOWFhNC0xMWVkLTljZGQtODdmNmFiNTMyYWYyIiwidiI6IjI1MWM2MmM4LTMwOWUtMTFlZC04M2VlLTZhNDk0ZDU5NmQ0NCIsInQiOjE2NzQ0MjcxOTY3ODksImgiOiI4NTM3ZTY0MmNiN2Y0ZTQ5NzExNDRiNzY1ZTFjYWU0YjY5ZGZhNTg2YzQ5M2E0MGE0MjljY2Q4YzAyODY2ZGI2In0=",
+        "x-px-authorization": env.GRUBHUB_XPX_TOKEN,
         accept: "*/*",
         authorization: `Bearer ${tokenData.accessToken}`,
         "accept-language": "en-us",
