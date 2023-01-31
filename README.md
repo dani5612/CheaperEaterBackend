@@ -19,7 +19,7 @@
       DOORDASH_GUEST_EMAIL=<email>
       DOORDASH_GUEST_PASSWORD=<password>
       GRUBHUB_CLIENT_ID=<id>
-      GRUBHUB_XPS_TOKEN=<token>
+      GRUBHUB_XPX_TOKEN=<token>
       ```
     - the values for the env variables can be found the the Discord's credential's channel
 5. Build and run:
