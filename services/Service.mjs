@@ -3,6 +3,18 @@ import { getDB } from "../database.mjs";
 class Service {
   constructor() {}
 
+  /*Checks if tokens are valid using database experitation times
+   *@return {Object} boolean values indicating the validity of both the refresh
+   * and access tokens
+   */
+  areTokensValid({ refreshTokenExpireTime, accessTokenExpireTime }) {
+    const today = new Date().getTime();
+    return {
+      refreshTokenIsValid: today < refreshTokenExpireTime,
+      accessTokenIsValid: today < accessTokenExpireTime,
+    };
+  }
+
   /*Get currently store token from the database, if token does not
    *exist, a new token is created
    *@return {Object} the token data that was retrieved from the database or created
