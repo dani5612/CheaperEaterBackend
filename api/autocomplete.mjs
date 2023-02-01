@@ -19,7 +19,7 @@ const autocompleteLocation = async (query) => {
 };
 
 /* Autocomplete search
- * @param {query} query to autocomplete
+ * @param {String} query to autocomplete
  * @retunr {Array} auto complete results
  */
 const autocompleteSearch = async (query, cookies) => {
