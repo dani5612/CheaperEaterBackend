@@ -181,30 +181,30 @@ class Postmates extends Service {
       throw new HTTPResponseError(res);
     }
   }
-    /* Get restaraunt menu
+  /* Get restaraunt menu
    * @param {restarauntID} contains the restraunt ID (Should come from search results as storeUUID)
    * @return {Object} the restaraunt menu (list of items + UUID; do we need subsection UUID?) or HTTPResponseError
    */
 
-    async getMenu(restarauntID) {
-      const res = await fetch("https://postmates.com/api/getStoreV1", {
-        method: "POST",
-        headers: {
-          authority: "postmates.com",
-          accept: "*/*",
-          "content-type": "application/json",
-          dnt: "1",
-          "x-csrf-token": "x",
-        },
-        body: '{"storeUuid":"0086cdd5-160c-45a5-844c-75d440494688"}',
-      });
-      if (res.ok) {
-        return {
-          data: await res.json(),
-        };
-      } else {
-        throw new HTTPResponseError(res);
-      }
+  async getMenu(restarauntID) {
+    const res = await fetch("https://postmates.com/api/getStoreV1", {
+      method: "POST",
+      headers: {
+        authority: "postmates.com",
+        accept: "*/*",
+        "content-type": "application/json",
+        dnt: "1",
+        "x-csrf-token": "x",
+      },
+      body: '{"storeUuid":"0086cdd5-160c-45a5-844c-75d440494688"}',
+    });
+    if (res.ok) {
+      return {
+        data: await res.json(),
+      };
+    } else {
+      throw new HTTPResponseError(res);
     }
+  }
 }
 export default Postmates;
