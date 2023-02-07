@@ -182,8 +182,9 @@ class Postmates extends Service {
     }
   }
   /* Get restaraunt menu
-   * @param {restarauntID} contains the restraunt ID (Should come from search results as storeUUID)
-   * @return {Object} the restaraunt menu (list of items + UUID; do we need subsection UUID?) or HTTPResponseError
+   * @param {String} contains the restraunt ID (Should come from search results as storeUUID)
+   * @return {Array} an array of [storeName, storeID, storeImage, storeHours,
+   * menu[category[items[name, description, price, image]]]], or HTTPResponseError
    */
 
   async getMenu(restarauntID) {
@@ -196,15 +197,43 @@ class Postmates extends Service {
         dnt: "1",
         "x-csrf-token": "x",
       },
-      body: '{"storeUuid":"0086cdd5-160c-45a5-844c-75d440494688"}',
+      body: '{"storeUuid":"' + restarauntID + '"}',
     });
     if (res.ok) {
-      return {
-        data: await res.json(),
-      };
+      return await res.json();
     } else {
       throw new HTTPResponseError(res);
     }
   }
+
+  /* Get item details;
+   * @param {Array} of [storeUUID, sectionUUID, subsection UUID, menuItemUUID]
+   * return <Whatever we need to add item to cart?>
+   */
+  // async getItem() {
+  //   const res = await fetch("https://postmates.com/api/getMenuItemV1", {
+  //     method: "POST",
+  //     headers: {
+  //       authority: "postmates.com",
+  //       accept: "*/*",
+  //       "content-type": "application/json",
+  //       dnt: "1",
+  //       "x-csrf-token": "x",
+  //     },
+  //     body: '{"itemRequestType":"ITEM",\
+  //       "storeUuid":"0086cdd5-160c-45a5-844c-75d440494688",\
+  //       "sectionUuid":"598441b1-32c0-5e56-ab8c-7c0394c80aaa",\
+  //       "subsectionUuid":"7e12b8f3-770e-51ee-80ae-be0340465ca3",\
+  //       "menuItemUuid":"7b7720ec-11c9-5b06-950f-5fbc85bdc77f",\
+  //       "diningMode":"DELIVERY"}',
+  //   });
+  //   if (res.ok) {
+  //     return {
+  //       data: await res.json(),
+  //     };
+  //   } else {
+  //     throw new HTTPResponseError(res);
+  //   }
+  // }
 }
 export default Postmates;
