@@ -148,6 +148,21 @@ class Grubhub extends Service {
       throw new HTTPResponseError(res);
     }
   }
+
+  async getMenu(restarauntID) {
+    const res = await fetch("https://postmates.com/api/getStoreV1", {
+      headers: {
+        authority: 'api-gtm.grubhub.com',
+        authorization: 'Bearer 5a49754d-e4b8-4847-9a3d-2daf270e1402',
+        dnt: '1',
+      },
+      body: '{"storeUuid":"' + restarauntID + '"}',
+    });
+    if (res.ok) {
+      return await res.json();
+    } else {
+      throw new HTTPResponseError(res);
+    }
 }
 
 export default Grubhub;

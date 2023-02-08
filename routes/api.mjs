@@ -57,12 +57,4 @@ router.post("/get/menu", async (req, res) => {
   }
 });
 
-router.post("/get/menu", async (req, res) => {
-  try {
-    return res.json(await getMenu(req.body));
-  } catch (e) {
-    console.error(e);
-  }
-});
-
 export default router;
