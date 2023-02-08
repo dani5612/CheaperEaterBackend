@@ -1,12 +1,12 @@
 import Postmates from "../services/Postmates.mjs";
 import { HTTPResponseError } from "../errors/http.mjs";
 
-/* Get Menu for Restaraunt given restarauntID
- * Hardcoded on line 14 for testing purposes; should point to McDonaldo
- * @param {Object} loationDetails location details obtained from /api/detail/location
- * @return {Array} cookies containing Postmates location data
- * //Stores have different hero URLs
+/* Get restaraunt menu
+ * @param {String} contains the restraunt ID (Should come from search results as storeUUID)
+ * @return {Array} an array of [storeName, storeID, storeImage, storeHours,
+ * menu[category[items[name, description, price, image]]]], or HTTPResponseError
  */
+
 const getMenu = async () => {
   try {
     const postmates = new Postmates();
