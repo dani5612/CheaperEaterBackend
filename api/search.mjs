@@ -22,8 +22,12 @@ const searchPostmates = async (searchData, cookies) => {
     resCookies = responseCookies;
 
     return {
-      stores: data.data.feedItems.map(
-        ({ store: { storeUuid, title, mapMarker, meta, rating, image } }) => {
+      stores: data.data.feedItems.reduce((acc, item) => {
+        if (item?.store?.storeUuid) {
+          const {
+            store: { storeUuid, title, mapMarker, meta, rating, image },
+          } = item;
+
           const firstImage = image.items[0];
           let deliveryInfo = {};
 
@@ -35,7 +39,7 @@ const searchPostmates = async (searchData, cookies) => {
             }
           }
 
-          return {
+          acc.push({
             id: storeUuid,
             title: title.text,
             location: {
@@ -45,9 +49,10 @@ const searchPostmates = async (searchData, cookies) => {
             ...deliveryInfo,
             rating: rating ? +rating.text : null,
             image: firstImage.url,
-          };
+          });
         }
-      ),
+        return acc;
+      }, []),
     };
   } catch (e) {
     if (e instanceof HTTPResponseError) {
