@@ -188,6 +188,30 @@ class Postmates extends Service {
       throw new HTTPResponseError(res);
     }
   }
+  /* Get restaraunt menu
+   * @param {String} contains the restraunt ID (Should come from search results as storeUUID)
+   * @return {Array} an array of [storeName, storeID, storeImage, storeHours,
+   * menu[category[items[name, description, price, image]]]], or HTTPResponseError
+   */
+
+  async getMenu(restarauntID) {
+    const res = await fetch("https://postmates.com/api/getStoreV1", {
+      method: "POST",
+      headers: {
+        authority: "postmates.com",
+        accept: "*/*",
+        "content-type": "application/json",
+        dnt: "1",
+        "x-csrf-token": "x",
+      },
+      body: JSON.stringify({ storeUuid: restarauntID }),
+    });
+    if (res.ok) {
+      return await res.json();
+    } else {
+      throw new HTTPResponseError(res);
+    }
+  }
 
   /*Autocomplete search results
    * @param {String} query to search
