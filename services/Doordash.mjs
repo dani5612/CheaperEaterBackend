@@ -12,6 +12,20 @@ class Doordash extends Service {
     this.service = "doordash";
   }
 
+  /* Assure a token is always valid, ie: nerver expired
+   * @param {Object} tokenData token data (expiration times and token data)
+   * @return {Object} valid tokenData, one of new token or
+   * original passed in token depending on validity of passed in tokenData.
+   */
+  async getValidToken(tokenData) {
+    const { accessTokenIsValid } = this.areTokensValid(tokenData);
+
+    if (!accessTokenIsValid) {
+      return await this.createNewToken();
+    }
+    return tokenData;
+  }
+
   /*Parse token data from API response
    * @param {Object} data the API reponse from getting token info
    * @return {Object} parased token data
@@ -31,7 +45,6 @@ class Doordash extends Service {
    * @return {Object} auth token data
    */
   async auth({ email, password }) {
-    console.log("auth");
     const res = await fetch("https://identity.doordash.com/api/v1/auth/token", {
       method: "POST",
       headers: {
@@ -84,8 +97,6 @@ class Doordash extends Service {
 
     if (res.ok) {
       const tokenData = this.parseTokenData(await res.json());
-      console.log("token data:");
-      console.log(tokenData);
       await this.updateToken(tokenData);
       return tokenData;
     } else {
@@ -128,7 +139,6 @@ class Doordash extends Service {
     );
     if (res.ok) {
       const { email } = await res.json();
-      console.log(email);
       const tokenData = this.parseTokenData(
         await this.auth({ email: email, password: password })
       );
@@ -144,13 +154,6 @@ class Doordash extends Service {
    * @return {Object} the search result or HTTPResponseError
    */
   async search({ query, location }) {
-    let tokenData = await this.getToken();
-    const { accessTokenIsValid } = this.areTokensValid(tokenData);
-
-    if (!accessTokenIsValid) {
-      tokenData = this.createNewToken();
-    }
-
     let endpoint = new URL(
       "https://consumer-mobile-bff.doordash.com/v3/search"
     );
@@ -173,7 +176,7 @@ class Doordash extends Service {
         "x-ios-bundle-identifier": "doordash.DoorDashConsumer",
         "x-support-nested-menu": "true",
         "x-support-schedule-save": "true",
-        authorization: `JWT ${tokenData.accessToken}`,
+        authorization: `JWT ${await this.getToken()}`,
         "accept-language": "en-US;q=1.0, es-MX;q=0.9",
         accept: "*/*",
       },
