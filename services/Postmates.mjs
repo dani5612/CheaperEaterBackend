@@ -188,13 +188,13 @@ class Postmates extends Service {
       throw new HTTPResponseError(res);
     }
   }
-  /* Get restaraunt menu
+
+  /* Get store information
    * @param {String} contains the restraunt ID (Should come from search results as storeUUID)
    * @return {Array} an array of [storeName, storeID, storeImage, storeHours,
    * menu[category[items[name, description, price, image]]]], or HTTPResponseError
    */
-
-  async getMenu(restarauntID) {
+  async getStore(restarauntID) {
     const res = await fetch("https://postmates.com/api/getStoreV1", {
       method: "POST",
       headers: {

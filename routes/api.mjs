@@ -5,9 +5,8 @@ import {
   autocompleteLocation,
   autocompleteSearch,
 } from "../api/autocomplete.mjs";
-import { detailLocation } from "../api/detail.mjs";
+import { detailLocation, detailStore } from "../api/detail.mjs";
 import { setLocation } from "../api/set.mjs";
-import { getMenu } from "../api/get.mjs";
 
 const router = express.Router();
 
@@ -18,6 +17,12 @@ router.post("/set/location", async (req, res) => {
 
 router.post("/detail/location", async (req, res) => {
   res.json(await detailLocation(req.body));
+});
+
+router.post("/detail/store", async (req, res) => {
+  res.json(
+    await detailStore({ service: req.body.service, storeId: req.body.storeId })
+  );
 });
 
 router.post("/autocomplete/location", async (req, res) => {
@@ -69,14 +74,6 @@ router.post("/db/add/", async (req, res) => {
   res.status(200).send({
     message: insertedId,
   });
-});
-
-router.post("/get/menu", async (req, res) => {
-  try {
-    return res.json(await getMenu(req.body));
-  } catch (e) {
-    console.error(e);
-  }
 });
 
 export default router;
