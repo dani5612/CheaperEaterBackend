@@ -111,7 +111,7 @@ const detailStore = async ({ service, storeId }) => {
   const store = await serviceInstance.getStore(storeId);
 
   switch (service) {
-    case "postamtes":
+    case "postmates":
       return parsePostmatesStore(store);
     case "grubhub":
       return praseGrubhubStore(store);
