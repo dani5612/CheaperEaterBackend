@@ -101,6 +101,11 @@ const praseGrubhubStore = (storeData) => {
   };
 };
 
+/*Get detail store information
+ * @param {String} service the name of the service the store belongs to
+ * @param {String} storeId the id of the store
+ * @return {Object} store information
+ */
 const detailStore = async ({ service, storeId }) => {
   const services = {
     postamtes: Postmates,
