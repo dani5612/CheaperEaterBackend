@@ -4,6 +4,7 @@ import { search } from "../api/search.mjs";
 import { autocompleteLocation } from "../api/autocomplete.mjs";
 import { detailLocation } from "../api/detail.mjs";
 import { setLocation } from "../api/set.mjs";
+import { popularRestaurants } from "../api/get.mjs";
 
 const router = express.Router();
 
@@ -48,11 +49,33 @@ router.post("/db/add/", async (req, res) => {
   });
 });
 
+//Mayank Tamakuwala's Part starts here
 router.post("/db/addReview/", async (req, res) => {
   const insertedId = await insertReview({ data: req.body.data });
   res.status(200).send({
     message: insertedId,
   });
 });
+
+router.post("/popularPicks/", async (req, res) => {
+  try {
+    const requestCookies = req.cookies;
+    if (requestCookies["uev2.loc"] === undefined) {
+      res.status(400);
+      res.json({ error: "missing location data cookie, set location first." })
+        .end;
+    }
+    const { data, responseCookies } = await popularRestaurants(
+      req.body,
+      requestCookies
+    );
+    res.setHeader("Set-Cookie", responseCookies);
+    res.json(data);
+  } catch (e) {
+    console.error(e);
+  }
+});
+
+//Mayank Tamakuwala's Part ends here
 
 export default router;
