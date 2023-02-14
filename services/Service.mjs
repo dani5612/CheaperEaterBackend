@@ -30,7 +30,8 @@ class Service {
         return this.createNewToken();
       }
 
-      return tokenData;
+      // assure the token returned is always valid, ie: not expired
+      return this.getValidToken(tokenData);
     } catch (e) {
       console.error(e);
     }
