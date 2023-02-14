@@ -49,7 +49,6 @@ router.post("/db/add/", async (req, res) => {
   });
 });
 
-//Mayank Tamakuwala's Part starts here
 router.post("/db/addReview/", async (req, res) => {
   const insertedId = await insertReview({ data: req.body.data });
   res.status(200).send({
@@ -65,17 +64,17 @@ router.post("/popularPicks/", async (req, res) => {
       res.json({ error: "missing location data cookie, set location first." })
         .end;
     }
-    const { data, responseCookies } = await popularRestaurants(
-      req.body,
-      requestCookies
-    );
-    res.setHeader("Set-Cookie", responseCookies);
+    const { data } = await popularRestaurants(req.body, requestCookies);
     res.json(data);
   } catch (e) {
     console.error(e);
   }
 });
 
-//Mayank Tamakuwala's Part ends here
-
+// const doesLocationCookieExist = (cookies) => {
+//   if (cookies === undefined) {
+//     return 400;
+//   }
+//   return 200;
+// };
 export default router;
