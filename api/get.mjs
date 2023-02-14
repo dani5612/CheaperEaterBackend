@@ -7,9 +7,8 @@ import { searchGrubhub } from "./search.mjs";
 const popularRestaurants = async (searchData, cookies) => {
   const { latitude, longitude } = JSON.parse(cookies["uev2.loc"]);
   searchData = { ...searchData, location: { latitude, longitude } };
-  const serviceSearchData = await searchGrubhub(searchData);
 
-  return { data: serviceSearchData };
+  return { data: await searchGrubhub(searchData) };
 };
 
 export { popularRestaurants };
