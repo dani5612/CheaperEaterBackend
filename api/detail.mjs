@@ -11,7 +11,7 @@ import { HTTPResponseError } from "../errors/http.mjs";
 const detailLocation = async (locationData) => {
   try {
     const postmates = new Postmates();
-    return (await postmates.getLocationDetails(locationData)).data;
+    return (await postmates.getDeliveryLocationDetails(locationData)).data;
   } catch (e) {
     if (e instanceof HTTPResponseError) {
       return { error: await e.getError() };
@@ -120,8 +120,6 @@ const detailStore = async ({ service, storeId }) => {
       return parsePostmatesStore(store);
     case "grubhub":
       return praseGrubhubStore(store);
-    case "doordash":
-    // erick
   }
 };
 
