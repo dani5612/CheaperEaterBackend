@@ -62,6 +62,27 @@ class Postmates extends Service {
     }
   }
 
+  /* Get detailed delivery location information
+   * @param {Object} locationData location data from getLocationAutocomplete
+   * @param {Object} location details
+   */
+  async getDeliveryLocationDetails({ id, provider }) {
+    const res = await fetch("https://postmates.com/api/getDeliveryLocationV1", {
+      method: "POST",
+      headers: this.commonHeaders,
+      body: JSON.stringify({
+        placeId: id,
+        provider: provider,
+        source: "manual_auto_complete",
+      }),
+    });
+    if (res.ok) {
+      return await res.json();
+    } else {
+      throw new HTTPResponseError(res);
+    }
+  }
+
   /*Replace the domain of cookies to the applicaiton domain
    * @param {Array} cookies the cookies to modify
    * @return {Array} modified cookies
