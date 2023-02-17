@@ -31,6 +31,27 @@ class Grubhub extends Service {
     };
   }
 
+  /* Assure a token is always valid, ie: nerver expired
+   * @param {Object} tokenData token data (expiration times and token data)
+   * @return {Object} valid tokenData, one of refreshed token, new token, or
+   * original passed in token depending on validity of passed in tokenData.
+   */
+  async getValidToken(tokenData) {
+    const { refreshTokenIsValid, accessTokenIsValid } =
+      this.areTokensValid(tokenData);
+
+    // update tokens if invalid
+    if (!accessTokenIsValid) {
+      if (refreshTokenIsValid) {
+        return await this.refreshAuth(tokenData.refreshToken);
+      } else {
+        return await this.createNewToken();
+      }
+    }
+
+    return tokenData;
+  }
+
   /* Create a new token, this method should only be called
    * if valid token data does not already exists in the database.
    * if you want to get a token to use, getToken() should be used
@@ -95,21 +116,6 @@ class Grubhub extends Service {
    * @return {Object} the search result or HTTPResponseError
    */
   async search({ query, location }) {
-    //const authData = await auth((await getToken()).refreshToken);
-    // check if token is expired
-    let tokenData = await this.getToken();
-    const { refreshTokenIsValid, accessTokenIsValid } =
-      this.areTokensValid(tokenData);
-
-    // update tokens if invalid
-    if (!accessTokenIsValid) {
-      if (refreshTokenIsValid) {
-        tokenData = await this.refreshAuth(tokenData.refreshToken);
-      } else {
-        tokenData = await this.createNewToken();
-      }
-    }
-
     let endpoint = new URL("https://api-gtm.grubhub.com/restaurants/search");
     const params = new URLSearchParams({
       orderMethod: "delivery",
@@ -135,10 +141,56 @@ class Grubhub extends Service {
         "content-type": "application/json",
         "x-px-authorization": env.GRUBHUB_XPX_TOKEN,
         accept: "*/*",
-        authorization: `Bearer ${tokenData.accessToken}`,
+        authorization: `Bearer ${(await this.getToken()).accessToken}`,
         "accept-language": "en-us",
         "user-agent": "GrubHub/2022.32 (iPhone; iOS 13.3.1; Scale/3.00)",
         vary: "Accept-Encoding",
+      },
+    });
+
+    if (res.ok) {
+      return await res.json();
+    } else {
+      throw new HTTPResponseError(res);
+    }
+  }
+
+  /*Get store information. Wraps web API
+   * @param storeId the store id
+   * @return {Object} object containing store information
+   */
+  async getStore(storeId) {
+    let endpoint = new URL(
+      `https://api-gtm.grubhub.com/restaurants/${storeId}`
+    );
+
+    const params = new URLSearchParams({
+      hideChoiceCategories: true,
+      version: 4,
+      variationId: "rtpFreeItems",
+      orderType: "standard",
+      hideUnavailableMenuItems: true,
+      hideMenuItems: false,
+      locationMode: "delivery",
+    });
+
+    endpoint.search = params;
+
+    const res = await fetch(endpoint, {
+      method: "GET",
+      headers: {
+        authority: "api-gtm.grubhub.com",
+        accept: "application/json",
+        "accept-language": "en-US,en;q=0.5",
+        authorization: `Bearer ${(await this.getToken()).accessToken}`,
+        origin: "https://www.grubhub.com",
+        referer: "https://www.grubhub.com/",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-site",
+        "sec-gpc": "1",
+        "user-agent":
+          "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Mobile Safari/537.36",
       },
     });
 

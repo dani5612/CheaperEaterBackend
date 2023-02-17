@@ -33,7 +33,6 @@ router.post("/autocomplete/location", async (req, res) => {
 router.post("/autocomplete/search", async (req, res) => {
   try {
     const requestCookies = req.cookies;
-
     const { locationRes, exists } = doesLocationCookieExist(res, req);
     res = locationRes;
 
