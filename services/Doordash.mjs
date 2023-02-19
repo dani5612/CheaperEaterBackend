@@ -13,6 +13,19 @@ class Doordash extends Service {
     this.service = "doordash";
   }
 
+  /* Assure a token is always valid, ie: nerver expired
+   * @param {Object} tokenData token data (expiration times and token data)
+   * @return {Object} valid tokenData, one of new token or
+   * original passed in token depending on validity of passed in tokenData.
+   */
+  async getValidToken(tokenData) {
+    const { accessTokenIsValid } = this.areTokensValid(tokenData);
+
+    if (!accessTokenIsValid) {
+      return await this.createNewToken();
+    }
+    return tokenData;
+  }
   /*Parse token data from API response
    * @param {Object} data the API reponse from getting token info
    * @return {Object} parased token data
@@ -174,7 +187,7 @@ class Doordash extends Service {
         "x-ios-bundle-identifier": "doordash.DoorDashConsumer",
         "x-support-nested-menu": "true",
         "x-support-schedule-save": "true",
-        authorization: `JWT ${tokenData.accessToken}`,
+        authorization: `JWT ${await this.getToken()}`,
         "accept-language": "en-US;q=1.0, es-MX;q=0.9",
         accept: "*/*",
       },
