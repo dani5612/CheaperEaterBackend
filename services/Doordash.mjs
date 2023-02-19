@@ -188,6 +188,12 @@ class Doordash extends Service {
       throw new HTTPResponseError(res);
     }
   }
+  /*
+   * Get store Menu
+   * @param {storeID}, ID of relevant store
+   * @return {info, menu}, two JSONs. Info holds restaraunt info,
+   * menu holds the restaraunt menu;
+   */
   async getStore(storeID) {
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
