@@ -2,7 +2,8 @@ import { env } from "node:process";
 import { v4 as uuidv4 } from "uuid";
 import jwt_decode from "jwt-decode";
 import fetch from "node-fetch";
-
+import puppeteer from "puppeteer";
+import { load } from "cheerio";
 import { HTTPResponseError } from "../errors/http.mjs";
 import Service from "./Service.mjs";
 
@@ -10,20 +11,6 @@ class Doordash extends Service {
   constructor() {
     super();
     this.service = "doordash";
-  }
-
-  /* Assure a token is always valid, ie: nerver expired
-   * @param {Object} tokenData token data (expiration times and token data)
-   * @return {Object} valid tokenData, one of new token or
-   * original passed in token depending on validity of passed in tokenData.
-   */
-  async getValidToken(tokenData) {
-    const { accessTokenIsValid } = this.areTokensValid(tokenData);
-
-    if (!accessTokenIsValid) {
-      return await this.createNewToken();
-    }
-    return tokenData;
   }
 
   /*Parse token data from API response
@@ -45,6 +32,7 @@ class Doordash extends Service {
    * @return {Object} auth token data
    */
   async auth({ email, password }) {
+    console.log("auth");
     const res = await fetch("https://identity.doordash.com/api/v1/auth/token", {
       method: "POST",
       headers: {
@@ -97,6 +85,8 @@ class Doordash extends Service {
 
     if (res.ok) {
       const tokenData = this.parseTokenData(await res.json());
+      console.log("token data:");
+      console.log(tokenData);
       await this.updateToken(tokenData);
       return tokenData;
     } else {
@@ -139,6 +129,7 @@ class Doordash extends Service {
     );
     if (res.ok) {
       const { email } = await res.json();
+      console.log(email);
       const tokenData = this.parseTokenData(
         await this.auth({ email: email, password: password })
       );
@@ -154,6 +145,13 @@ class Doordash extends Service {
    * @return {Object} the search result or HTTPResponseError
    */
   async search({ query, location }) {
+    let tokenData = await this.getToken();
+    const { accessTokenIsValid } = this.areTokensValid(tokenData);
+
+    if (!accessTokenIsValid) {
+      tokenData = this.createNewToken();
+    }
+
     let endpoint = new URL(
       "https://consumer-mobile-bff.doordash.com/v3/search"
     );
@@ -176,7 +174,7 @@ class Doordash extends Service {
         "x-ios-bundle-identifier": "doordash.DoorDashConsumer",
         "x-support-nested-menu": "true",
         "x-support-schedule-save": "true",
-        authorization: `JWT ${await this.getToken()}`,
+        authorization: `JWT ${tokenData.accessToken}`,
         "accept-language": "en-US;q=1.0, es-MX;q=0.9",
         accept: "*/*",
       },
@@ -187,6 +185,36 @@ class Doordash extends Service {
     } else {
       throw new HTTPResponseError(res);
     }
+  }
+  async getStore(storeID) {
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+    await page.setUserAgent(
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"
+    );
+    await page.goto("https://www.doordash.com/store/" + storeID + "/");
+
+    const pageContent = await page.content();
+    const storeHtml = load(pageContent);
+    const scripts = storeHtml('script[type="application/ld+json"]');
+
+    const scriptTexts = [];
+    scripts.each(function () {
+      const scriptText = storeHtml(this).html().replace("</script>", "");
+      try {
+        JSON.parse(scriptText);
+      } catch (e) {
+        console.log("Error: Data is NOT a JSON");
+      }
+      scriptTexts.push(scriptText);
+    });
+    setTimeout(async () => {
+      await browser.close();
+    });
+    return {
+      info: JSON.parse(scriptTexts[0]),
+      menu: JSON.parse(scriptTexts[2]),
+    };
   }
 }
 export default Doordash;

@@ -68,7 +68,7 @@ const parsePostmatesStore = (storeData) => {
  * @param {Object} storeData the store data to parse
  * @return {Object} parsed store information
  */
-const praseGrubhubStore = (storeData) => {
+const parseGrubhubStore = (storeData) => {
   const { delivery_fee, available_hours } = storeData.restaurant_availability;
   const { id, name, address, logo, menu_category_list } = storeData.restaurant;
   return {
@@ -101,12 +101,42 @@ const praseGrubhubStore = (storeData) => {
   };
 };
 
+/*Parse DoorDash store data
+ * @param {Object} storeData the store data to parse
+ * @return {Object} parsed store information
+ */
+const parseDoorDashStore = (storeData) => {
+  const { info, menu } = storeData;
+  return {
+    restarauntName: info.name,
+    image: info.image[0],
+    logo: info.image[1],
+    location: {
+      streetAddress: info.address.streetaddress,
+      city: info.address.addressLocality,
+      state: info.address.addressRegion,
+      country: info.address.addressCountry,
+    },
+    coordinates: {
+      latitude: info.geo.latitude,
+      longitude: info.geo.longitude,
+    },
+    menu: menu.hasMenuSection[0].map((category) => ({
+      categoryName: category.name,
+      items: category.hasMenuItem.map((item) => ({
+        name: item.name,
+        price: item.offers.price,
+      })),
+    })),
+  };
+};
 /*Get detail store information
  * @param {String} service the name of the service the store belongs to
  * @param {String} storeId the id of the store
  * @return {Object} store information
  */
 const detailStore = async ({ service, storeId }) => {
+  console.log(service);
   const services = {
     postamtes: Postmates,
     grubhub: Grubhub,
@@ -119,9 +149,9 @@ const detailStore = async ({ service, storeId }) => {
     case "postmates":
       return parsePostmatesStore(store);
     case "grubhub":
-      return praseGrubhubStore(store);
+      return parseGrubhubStore(store);
     case "doordash":
-    // erick
+      return parseDoorDashStore(store);
   }
 };
 
