@@ -210,4 +210,4 @@ const search = async (searchData, cookies) => {
   };
 };
 
-export { search };
+export { search, searchGrubhub };

@@ -7,6 +7,13 @@ const insertOne = async (insertData) => {
   return response.insertedId;
 };
 
+const insertReview = async (insertData) => {
+  const db = await getDB();
+  const testCollection = db.collection("reviews");
+  const response = await testCollection.insertOne(insertData);
+  return response.insertedId;
+};
+
 const find = async () => {
   const db = await getDB();
   const testCollection = db.collection("test");
@@ -14,4 +21,4 @@ const find = async () => {
   return await cursor.toArray();
 };
 
-export { insertOne, find };
+export { insertOne, find, insertReview };
