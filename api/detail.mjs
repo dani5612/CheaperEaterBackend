@@ -112,7 +112,7 @@ const parseDoorDashStore = (storeData) => {
     image: info.image[0],
     logo: info.image[1],
     location: {
-      streetAddress: info.address.streetaddress,
+      streetAddress: info.address.streetAddress,
       city: info.address.addressLocality,
       state: info.address.addressRegion,
       country: info.address.addressCountry,
