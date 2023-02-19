@@ -142,7 +142,6 @@ class Doordash extends Service {
     );
     if (res.ok) {
       const { email } = await res.json();
-      console.log(email);
       const tokenData = this.parseTokenData(
         await this.auth({ email: email, password: password })
       );
@@ -158,13 +157,6 @@ class Doordash extends Service {
    * @return {Object} the search result or HTTPResponseError
    */
   async search({ query, location }) {
-    let tokenData = await this.getToken();
-    const { accessTokenIsValid } = this.areTokensValid(tokenData);
-
-    if (!accessTokenIsValid) {
-      tokenData = this.createNewToken();
-    }
-
     let endpoint = new URL(
       "https://consumer-mobile-bff.doordash.com/v3/search"
     );
