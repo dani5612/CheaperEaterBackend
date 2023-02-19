@@ -45,7 +45,6 @@ class Doordash extends Service {
    * @return {Object} auth token data
    */
   async auth({ email, password }) {
-    console.log("auth");
     const res = await fetch("https://identity.doordash.com/api/v1/auth/token", {
       method: "POST",
       headers: {
@@ -98,8 +97,6 @@ class Doordash extends Service {
 
     if (res.ok) {
       const tokenData = this.parseTokenData(await res.json());
-      console.log("token data:");
-      console.log(tokenData);
       await this.updateToken(tokenData);
       return tokenData;
     } else {

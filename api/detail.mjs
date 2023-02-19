@@ -136,7 +136,7 @@ const parseDoorDashStore = (storeData) => {
  * @return {Object} store information
  */
 const detailStore = async ({ service, storeId }) => {
-    const services = {
+  const services = {
     postamtes: Postmates,
     grubhub: Grubhub,
     doordash: Doordash,
