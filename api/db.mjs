@@ -14,4 +14,11 @@ const find = async () => {
   return await cursor.toArray();
 };
 
-export { insertOne, find };
+const insertSignUp = async (insertData) => {
+  const db = await getDB();
+  const testCollection = db.collection("login");
+  const response = await testCollection.insertOne(insertData);
+  return response.insertedId;
+};
+
+export { insertOne, find, insertSignUp };

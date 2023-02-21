@@ -1,5 +1,5 @@
 import express from "express";
-import { insertOne, find } from "../api/db.mjs";
+import { insertOne, find, insertSignUp } from "../api/db.mjs";
 import { search } from "../api/search.mjs";
 import {
   autocompleteLocation,
@@ -71,6 +71,13 @@ router.get("/db/get/", async (req, res) => {
 
 router.post("/db/add/", async (req, res) => {
   const insertedId = await insertOne({ data: req.body.data });
+  res.status(200).send({
+    message: insertedId,
+  });
+});
+
+router.post("/auth/signup/", async (req, res) => {
+  const insertedId = await insertSignUp({ data: req.body.data });
   res.status(200).send({
     message: insertedId,
   });
