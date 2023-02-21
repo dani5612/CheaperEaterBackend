@@ -7,6 +7,13 @@ const insertOne = async (insertData) => {
   return response.insertedId;
 };
 
+const insertReview = async (insertData) => {
+  const db = await getDB();
+  const testCollection = db.collection("reviews");
+  const response = await testCollection.insertOne(insertData);
+  return response.insertedId;
+};
+
 const find = async () => {
   const db = await getDB();
   const testCollection = db.collection("test");
@@ -21,4 +28,4 @@ const insertSignUp = async (insertData) => {
   return response.insertedId;
 };
 
-export { insertOne, find, insertSignUp };
+export { insertOne, find, insertReview, insertSignUp };

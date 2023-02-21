@@ -2,7 +2,8 @@ import { env } from "node:process";
 import { v4 as uuidv4 } from "uuid";
 import jwt_decode from "jwt-decode";
 import fetch from "node-fetch";
-
+import puppeteer from "puppeteer";
+import { load } from "cheerio";
 import { HTTPResponseError } from "../errors/http.mjs";
 import Service from "./Service.mjs";
 
@@ -25,7 +26,6 @@ class Doordash extends Service {
     }
     return tokenData;
   }
-
   /*Parse token data from API response
    * @param {Object} data the API reponse from getting token info
    * @return {Object} parased token data
@@ -187,6 +187,42 @@ class Doordash extends Service {
     } else {
       throw new HTTPResponseError(res);
     }
+  }
+  /*
+   * Get store Menu
+   * @param {storeID}, ID of relevant store
+   * @return {info, menu}, two JSONs. Info holds restaraunt info,
+   * menu holds the restaraunt menu;
+   */
+  async getStore(storeID) {
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+    await page.setUserAgent(
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"
+    );
+    await page.goto("https://www.doordash.com/store/" + storeID + "/");
+
+    const pageContent = await page.content();
+    const storeHtml = load(pageContent);
+    const scripts = storeHtml('script[type="application/ld+json"]');
+
+    const scriptTexts = [];
+    scripts.each(function () {
+      const scriptText = storeHtml(this).html().replace("</script>", "");
+      try {
+        JSON.parse(scriptText);
+      } catch (e) {
+        console.log("Error: Data is NOT a JSON");
+      }
+      scriptTexts.push(scriptText);
+    });
+    setTimeout(async () => {
+      await browser.close();
+    });
+    return {
+      info: JSON.parse(scriptTexts[0]),
+      menu: JSON.parse(scriptTexts[2]),
+    };
   }
 }
 export default Doordash;
