@@ -1,5 +1,5 @@
 import express from "express";
-import { insertOne, find, insertReview } from "../api/db.mjs";
+import { insertOne, find, insertReview, insertSignUp } from "../api/db.mjs";
 import { search } from "../api/search.mjs";
 import {
   autocompleteLocation,
@@ -76,6 +76,13 @@ router.post("/db/add/", async (req, res) => {
   });
 });
 
+router.post("/auth/signup/", async (req, res) => {
+  const insertedId = await insertSignUp({ data: req.body.data });
+  res.status(200).send({
+    message: insertedId,
+  });
+});
+
 router.post("/db/addReview/", async (req, res) => {
   const insertedId = await insertReview({ data: req.body.data });
   res.status(200).send({
@@ -107,4 +114,5 @@ const doesLocationCookieExist = (res, req) => {
   res.status(200);
   return { locationRes: res, exists: true };
 };
+
 export default router;
