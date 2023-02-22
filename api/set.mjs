@@ -8,7 +8,9 @@ import { HTTPResponseError } from "../errors/http.mjs";
 const setLocation = async (locationDetails) => {
   try {
     const postmates = new Postmates();
-    return await postmates.setLocation(locationDetails);
+    return {
+      cookies: (await postmates.setLocation(locationDetails)).responseCookies,
+    };
   } catch (e) {
     if (e instanceof HTTPResponseError) {
       return { error: await e.getError() };

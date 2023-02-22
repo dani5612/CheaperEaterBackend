@@ -2,7 +2,6 @@ import { env } from "node:process";
 import fetch from "node-fetch";
 import { HTTPResponseError } from "../errors/http.mjs";
 import Service from "./Service.mjs";
-import "dotenv/config";
 
 class Postmates extends Service {
   constructor() {
@@ -93,6 +92,18 @@ class Postmates extends Service {
     );
   }
 
+  /*Conver array of cookie strings in standard format to JSON object
+   * @param {Array} cookies
+   * @return {Object} converted key value pair JSON object
+   */
+  cookiesToJson(cookies) {
+    return cookies.reduce((cookiesJson, cookie) => {
+      const [prop, value] = cookie.split(";")[0].split("=");
+      cookiesJson[prop] = value;
+      return cookiesJson;
+    }, {});
+  }
+
   /* Convert Json cookie to a format Postmate's server understands
    *@param {Object, String} json the json data to convert
    *@Param {Booleam} isString a value indicating if the json data is string
@@ -149,7 +160,9 @@ class Postmates extends Service {
     });
 
     if (res.ok) {
-      return this.replaceCookieDomain(res.headers.raw()["set-cookie"]);
+      return {
+        responseCookies: this.cookiesToJson(res.headers.raw()["set-cookie"]),
+      };
     } else {
       throw new HTTPResponseError(res);
     }
@@ -201,9 +214,9 @@ class Postmates extends Service {
     if (res.ok) {
       return {
         data: await res.json(),
-        responseCookies: this.replaceCookieDomain(
-          res.headers.raw()["set-cookie"]
-        ),
+        resCookies: {
+          ...this.cookiesToJson(res.headers.raw()["set-cookie"]),
+        },
       };
     } else {
       throw new HTTPResponseError(res);
@@ -271,9 +284,7 @@ class Postmates extends Service {
     if (res.ok) {
       return {
         data: await res.json(),
-        responseCookies: this.replaceCookieDomain(
-          res.headers.raw()["set-cookie"]
-        ),
+        responseCookies: this.cookiesToJson(res.headers.raw()["set-cookie"]),
       };
     } else {
       throw new HTTPResponseError(res);

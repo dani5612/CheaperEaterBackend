@@ -11,9 +11,27 @@ import { popularRestaurants } from "../api/get.mjs";
 
 const router = express.Router();
 
+// location requirement middleware
+router.use((req, res, next) => {
+  const locationRequiredEndpoints = [
+    "/autocomplete/search",
+    "/search",
+    "/popularPicks",
+  ];
+
+  if (
+    locationRequiredEndpoints.includes(req.url) &&
+    (!req?.body?.cookies || !req?.body?.cookies["uev2.loc"])
+  ) {
+    res.status(400);
+    res.json({ error: "missing required location data" });
+  } else {
+    next();
+  }
+});
+
 router.post("/set/location", async (req, res) => {
-  res.setHeader("Set-Cookie", await setLocation(req.body));
-  res.send();
+  res.json(await setLocation(req.body));
 });
 
 router.post("/detail/location", async (req, res) => {
@@ -32,18 +50,7 @@ router.post("/autocomplete/location", async (req, res) => {
 
 router.post("/autocomplete/search", async (req, res) => {
   try {
-    const requestCookies = req.cookies;
-    const { locationRes, exists } = doesLocationCookieExist(res, req);
-    res = locationRes;
-
-    if (exists) {
-      const { data, responseCookies } = await autocompleteSearch(
-        req.body.query,
-        requestCookies
-      );
-      res.setHeader("Set-Cookie", responseCookies);
-      res.json(data);
-    }
+    res.json(await autocompleteSearch(req.body));
   } catch (e) {
     console.error(e);
   }
@@ -51,14 +58,7 @@ router.post("/autocomplete/search", async (req, res) => {
 
 router.post("/search", async (req, res) => {
   try {
-    const requestCookies = req.cookies;
-    const { locationRes, exists } = doesLocationCookieExist(res, req);
-    res = locationRes;
-    if (exists) {
-      const { data, responseCookies } = await search(req.body, requestCookies);
-      res.setHeader("Set-Cookie", responseCookies);
-      res.json(data);
-    }
+    res.json(await search(req.body));
   } catch (e) {
     console.error(e);
   }
@@ -83,28 +83,12 @@ router.post("/db/addReview/", async (req, res) => {
   });
 });
 
-router.post("/popularPicks/", async (req, res) => {
+router.post("/popularPicks", async (req, res) => {
   try {
-    const requestCookies = req.cookies;
-
-    const { locationRes, exists } = doesLocationCookieExist(res, req);
-    res = locationRes;
-
-    if (exists) {
-      res.json(await popularRestaurants(req.body, requestCookies));
-    }
+    res.json(await popularRestaurants(req.body));
   } catch (e) {
     console.error(e);
   }
 });
 
-const doesLocationCookieExist = (res, req) => {
-  const cookies = req.cookies;
-  if (cookies["uev2.loc"] === undefined) {
-    res.status(400);
-    return { locationRes: res, exists: false };
-  }
-  res.status(200);
-  return { locationRes: res, exists: true };
-};
 export default router;
