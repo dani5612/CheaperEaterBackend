@@ -1,3 +1,5 @@
+import { env } from "node:process";
+import jwt from "jsonwebtoken";
 import express from "express";
 import { insertOne, find, insertReview, insertSignUp } from "../api/db.mjs";
 import { search } from "../api/search.mjs";
@@ -8,8 +10,33 @@ import {
 import { detailLocation, detailStore } from "../api/detail.mjs";
 import { setLocation } from "../api/set.mjs";
 import { popularRestaurants } from "../api/get.mjs";
+import { register, login, logout } from "../api/auth.mjs";
 
 const router = express.Router();
+
+const authenticateUser = (req, res, next) => {
+  const auth = req.headers.authorization;
+  const token = auth && auth.split(" ")[1];
+  if (!token) {
+    res.sendStatus(401);
+  }
+  jwt.verify(token, env.ACCESS_TOKEN_SECRET, (err, user) => {
+    if (err) {
+      res.sendStatus(403);
+    } else {
+      req.user = user;
+      next();
+    }
+  });
+};
+
+router.post("/auth/register", (req, res) => {
+  res.json(register(req.body));
+});
+
+router.post("/auth/login", async (req, res) => {
+  res.json(await login(req.body));
+});
 
 router.post("/set/location", async (req, res) => {
   res.setHeader("Set-Cookie", await setLocation(req.body));
@@ -30,7 +57,7 @@ router.post("/autocomplete/location", async (req, res) => {
   res.json(await autocompleteLocation(req.body.query));
 });
 
-router.post("/autocomplete/search", async (req, res) => {
+router.post("/autocomplete/search", authenticateUser, async (req, res) => {
   try {
     const requestCookies = req.cookies;
     const { locationRes, exists } = doesLocationCookieExist(res, req);
