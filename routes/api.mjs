@@ -11,7 +11,7 @@ import { popularRestaurants } from "../api/get.mjs";
 
 const router = express.Router();
 
-const requireLocationMiddleware = (req, res, next) => {
+const requireLocation = (req, res, next) => {
   if (!req?.body?.cookies) {
     res.status(400);
     res.json({ error: "missing cookie data" });
@@ -41,19 +41,15 @@ router.post("/autocomplete/location", async (req, res) => {
   res.json(await autocompleteLocation(req.body.query));
 });
 
-router.post(
-  "/autocomplete/search",
-  requireLocationMiddleware,
-  async (req, res) => {
-    try {
-      res.json(await autocompleteSearch(req.body));
-    } catch (e) {
-      console.error(e);
-    }
+router.post("/autocomplete/search", requireLocation, async (req, res) => {
+  try {
+    res.json(await autocompleteSearch(req.body));
+  } catch (e) {
+    console.error(e);
   }
-);
+});
 
-router.post("/search", requireLocationMiddleware, async (req, res) => {
+router.post("/search", requireLocation, async (req, res) => {
   try {
     res.json(await search(req.body));
   } catch (e) {
@@ -87,7 +83,7 @@ router.post("/db/addReview/", async (req, res) => {
   });
 });
 
-router.post("/popularPicks", requireLocationMiddleware, async (req, res) => {
+router.post("/popularPicks", requireLocation, async (req, res) => {
   try {
     res.json(await popularRestaurants(req.body));
   } catch (e) {
