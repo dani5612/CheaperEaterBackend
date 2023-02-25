@@ -40,6 +40,11 @@ const requireAuthentication = (req, res, next) => {
   }
 };
 
+/*Middleware to require location
+ * @param {Object} req request
+ * @param {Object} res response
+ *@param {Object} next next middleware call
+ */
 const requireLocation = (req, res, next) => {
   if (!req?.body?.cookies) {
     res.status(400);
@@ -108,7 +113,6 @@ router.post("/auth/resetAccountPassword", async (req, res) => {
     res.json({ error: e });
   }
 });
-
 
 router.post("/set/location", async (req, res) => {
   res.json(await setLocation(req.body));
