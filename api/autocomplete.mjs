@@ -22,8 +22,9 @@ const autocompleteLocation = async (query) => {
  * @param {String} query to autocomplete
  * @retunr {Array} auto complete results
  */
-const autocompleteSearch = async (query, cookies) => {
+const autocompleteSearch = async (searchData) => {
   try {
+    const { query, cookies } = searchData;
     const postmates = new Postmates();
     const { data, responseCookies } = await postmates.autocompleteSearch({
       query: query,
@@ -31,7 +32,7 @@ const autocompleteSearch = async (query, cookies) => {
     });
 
     return {
-      responseCookies: responseCookies,
+      cookies: responseCookies,
       data: data.data.reduce((acc, { store }) => {
         if (store) {
           acc.push({
