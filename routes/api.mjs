@@ -77,7 +77,7 @@ router.post("/auth/logout", requireAuthentication, async (req, res) => {
   res.json(await logout(req.username));
 });
 
-router.post("/auth/requestAccountReset", async (req, res) => {
+router.post("/auth/requestPasswordReset", async (req, res) => {
   try {
     await sendPasswordResetLink(req.body);
     res.sendStatus(200);
