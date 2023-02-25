@@ -5,21 +5,21 @@ import { HTTPResponseError } from "../errors/http.mjs";
 
 // store any response cookies to be sent back after search
 // currently this is used to update Postamtes search cookies
-let resCookies = [];
+let RES_COOKIES = {};
 
 /* Search postmates
  * @param {string} query the query to search from (ex:pizza, mcdonalds)
  * @return {object} either a stores object or error
  */
-const searchPostmates = async (searchData, cookies) => {
+const searchPostmates = async (searchData, reqCookies) => {
   try {
     const postmates = new Postmates();
-    const { data, responseCookies } = await postmates.search({
+    const { data, resCookies } = await postmates.search({
       ...searchData,
-      cookies: cookies,
+      cookies: reqCookies,
     });
 
-    resCookies = responseCookies;
+    RES_COOKIES = { ...RES_COOKIES, ...resCookies };
 
     return {
       stores: data.data.feedItems.reduce((acc, item) => {
@@ -191,8 +191,11 @@ const searchDoordash = async (searchData) => {
  * ex: {query: "", location: {longitude: 0, latitude: 0}}
  * @return {array} an array of service objects
  */
-const search = async (searchData, cookies) => {
-  const { latitude, longitude } = JSON.parse(cookies["uev2.loc"]);
+const search = async (searchData) => {
+  const { cookies } = searchData;
+  const { latitude, longitude } = JSON.parse(
+    decodeURIComponent(cookies["uev2.loc"])
+  );
   searchData = { ...searchData, location: { latitude, longitude } };
   const services = ["postmates", "grubhub", "doordash"];
   const serviceSearchData = await Promise.all([
@@ -202,7 +205,7 @@ const search = async (searchData, cookies) => {
   ]);
 
   return {
-    responseCookies: resCookies,
+    cookies: RES_COOKIES,
     data: services.map((service, index) => ({
       service: service,
       ...serviceSearchData[index],

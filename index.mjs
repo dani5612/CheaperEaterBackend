@@ -1,19 +1,17 @@
+import { env } from "node:process";
 import * as dotenv from "dotenv";
 dotenv.config();
 
 import express from "express";
 import cors from "cors";
-import cookieParser from "cookie-parser";
 import apiRouter from "./routes/api.mjs";
 
 const app = express();
 const port = 8000;
 
-app.use(cookieParser());
-
 app.use(
   cors({
-    origin: "http://localhost:19006",
+    origin: `http://${env.DOMAIN}:19006`,
     credentials: true,
   })
 );
