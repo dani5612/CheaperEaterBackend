@@ -1,7 +1,12 @@
 import { env } from "node:process";
+import crypto from "crypto";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { ObjectId } from "mongodb";
+import { sendEmail } from "../utils/email/email.mjs";
 import { getDB } from "../database.mjs";
+
+const SALT_ROUNDS = 10;
 
 /* get username from jwt access token
  * @param {String} accessToken with username information
@@ -94,8 +99,6 @@ const generateRefreshToken = (payload, expiresIn = "24h") => {
  * @param {Object} containing username,email, and password
  */
 const register = async ({ username, email, password }) => {
-  const saltRounds = 10;
-
   email = email.toLowerCase();
   username = username.toLowerCase();
 
@@ -119,7 +122,7 @@ const register = async ({ username, email, password }) => {
       }
     }
 
-    bcrypt.hash(password, saltRounds, async (err, hash) => {
+    bcrypt.hash(password, SALT_ROUNDS, async (err, hash) => {
       if (err) {
         console.error(err);
       }
@@ -173,4 +176,90 @@ const logout = async (username) => {
     .updateOne({ username: username }, { $set: { refreshTokens: [] } });
 };
 
-export { register, login, logout, refreshToken, getUsernameFromAccessToken };
+/*Send password reset link to user email
+ *@param {Object} with account email
+ */
+const sendPasswordResetLink = async ({ email }) => {
+  try {
+    const user = await (await getDB())
+      .collection("users")
+      .findOne({ email: email });
+
+    if (user) {
+      const passwordResetToken = crypto.randomBytes(32).toString("hex");
+
+      await (await getDB()).collection("passwordResetTokens").insertOne({
+        createdAt: new Date(),
+        userId: user._id,
+        token: await bcrypt.hash(passwordResetToken, SALT_ROUNDS),
+      });
+
+      await sendEmail({
+        from: env.SMTP_HOST,
+        to: email,
+        subject: "Reset your password",
+        emailTemplate: "resetAccountPassword.html",
+        templatePayload: {
+          username: user.username,
+          link: `${env.DOMAIN}/passwordReset?token=${passwordResetToken}&id=${user._id}`,
+        },
+      });
+    } else {
+      return Promise.reject("account not found");
+    }
+  } catch (e) {
+    console.error(e);
+  }
+};
+
+/*Reset account password
+ *@param {Object} with userId of account, newPassword,
+ *and passwordResetToken to authenticatethe reset
+ */
+const resetAccountPassword = async ({
+  userId,
+  newPassword,
+  passwordResetToken,
+}) => {
+  try {
+    const db = await getDB();
+    const passwordResetTokens = db.collection("passwordResetTokens");
+    const resetToken = await passwordResetTokens.findOne({
+      userId: ObjectId(userId),
+    });
+
+    if (resetToken) {
+      if (await bcrypt.compare(passwordResetToken, resetToken.token)) {
+        bcrypt.hash(newPassword, SALT_ROUNDS, async (err, hash) => {
+          if (err) {
+            console.error(err);
+          }
+          await db.collection("users").updateOne(
+            {
+              _id: ObjectId(userId),
+            },
+            { $set: { password: hash } }
+          );
+        });
+      } else {
+        return Promise.reject("token expired");
+      }
+
+      await passwordResetTokens.deleteOne(resetToken);
+    } else {
+      return Promise.reject("invalid token");
+    }
+  } catch (e) {
+    console.error(e);
+  }
+};
+
+export {
+  register,
+  login,
+  logout,
+  sendPasswordResetLink,
+  refreshToken,
+  resetAccountPassword,
+  getUsernameFromAccessToken,
+};

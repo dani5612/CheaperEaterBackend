@@ -12,6 +12,8 @@ import {
   register,
   login,
   logout,
+  sendPasswordResetLink,
+  resetAccountPassword,
   refreshToken,
   getUsernameFromAccessToken,
 } from "../api/auth.mjs";
@@ -73,6 +75,26 @@ router.post("/auth/login", async (req, res) => {
 
 router.post("/auth/logout", requireAuthentication, async (req, res) => {
   res.json(await logout(req.username));
+});
+
+router.post("/auth/requestAccountReset", async (req, res) => {
+  try {
+    await sendPasswordResetLink(req.body);
+    res.sendStatus(200);
+  } catch (e) {
+    res.status(400);
+    res.json({ error: e });
+  }
+});
+
+router.post("/auth/resetAccountPassword", async (req, res) => {
+  try {
+    await resetAccountPassword(req.body);
+    res.sendStatus(200);
+  } catch (e) {
+    res.status(400);
+    res.json({ error: e });
+  }
 });
 
 router.post("/set/location", async (req, res) => {
