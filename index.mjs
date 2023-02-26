@@ -11,7 +11,7 @@ const port = env.PORT;
 
 app.use(
   cors({
-    origin: `http://${env.DOMAIN}:19006`,
+    origin: `http://${env.DOMAIN}:${env.EXPO_WEB_DEV_PORT}`,
     credentials: true,
   })
 );
