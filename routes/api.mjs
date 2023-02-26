@@ -16,6 +16,7 @@ import {
   resetAccountPassword,
   refreshToken,
   getUsernameFromAccessToken,
+  verifyAccountEmail,
 } from "../api/auth.mjs";
 
 const router = express.Router();
@@ -107,6 +108,16 @@ router.post("/auth/requestPasswordReset", async (req, res) => {
 router.post("/auth/resetAccountPassword", async (req, res) => {
   try {
     await resetAccountPassword(req.body);
+    res.sendStatus(200);
+  } catch (e) {
+    res.status(400);
+    res.json({ error: e });
+  }
+});
+
+router.post("/auth/verifyAccountEmail", async (req, res) => {
+  try {
+    await verifyAccountEmail(req.body);
     res.sendStatus(200);
   } catch (e) {
     res.status(400);
