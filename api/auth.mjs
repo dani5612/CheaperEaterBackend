@@ -319,12 +319,29 @@ const login = async ({ email, password }) => {
 };
 
 /* Logout user
- * @param {String} username to logout
+ * @param {Object} payload
+ * @param {String} payload.username username to logout
+ * @param {String} payload.refreshToken most recent refresh token to remove from refresh Tokens
  */
-const logout = async (username) => {
-  await (await getDB())
-    .collection("users")
-    .updateOne({ username: username }, { $set: { refreshTokens: [] } });
+const logout = async ({ username, refreshToken }) => {
+  const users = (await getDB()).collection("users");
+  const refreshTokens = (await users.findOne({ username: username }))
+    .refreshTokens;
+
+  if (!refreshTokens.includes(refreshToken)) {
+    return Promise.reject("invalid token");
+  }
+
+  await users.updateOne(
+    { username: username },
+    {
+      $set: {
+        refreshTokens: refreshTokens.filter(
+          (rToken) => rToken !== refreshToken
+        ),
+      },
+    }
+  );
 };
 
 /* Send password reset link to user email
