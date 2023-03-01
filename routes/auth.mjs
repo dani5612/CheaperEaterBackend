@@ -46,7 +46,20 @@ authRouter.post("/login", async (req, res) => {
 });
 
 authRouter.post("/logout", requireAuthentication, async (req, res) => {
-  res.json(await logout(req.username));
+  try {
+    await logout({
+      username: req.username,
+      refreshToken: req.body.refreshToken,
+    });
+    res.sendStatus(200);
+  } catch (e) {
+    if (e === "invalid token") {
+      res.status(401);
+    } else {
+      res.status(400);
+    }
+    res.json({ error: e });
+  }
 });
 
 authRouter.post("/requestPasswordReset", async (req, res) => {
