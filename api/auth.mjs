@@ -153,7 +153,10 @@ const register = async ({ username, email, password }) => {
         emailTemplate: "verifyAccountEmail.html",
         templatePayload: {
           username: username,
-          link: `${env.DOMAIN}/verifyAccountEmail?token=${registerToken}&id=${newUser.insertedId}`,
+          link: `http://${env.DOMAIN}:${env.PORT}/verifyAccountEmail?token=${registerToken}&id=${newUser.insertedId}`,
+          logoUrl:
+            "https://raw.githubusercontent.com/cheaper-eater/frontend/main/assets/logos/logo.png",
+          indexUrl: `http://${env.DOMAIN}:${env.PORT}`,
         },
       });
     });
@@ -367,7 +370,10 @@ const sendPasswordResetLink = async ({ email }) => {
         emailTemplate: "resetAccountPassword.html",
         templatePayload: {
           username: user.username,
-          link: `${env.DOMAIN}/passwordReset?token=${passwordResetToken}&id=${user._id}`,
+          link: `http://${env.DOMAIN}:${env.PORT}/passwordReset?token=${passwordResetToken}&id=${user._id}`,
+          logoUrl:
+            "https://raw.githubusercontent.com/cheaper-eater/frontend/main/assets/logos/logo.png",
+          indexUrl: `http://${env.DOMAIN}:${env.PORT}`,
         },
       });
     } else {
