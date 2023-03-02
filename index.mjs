@@ -7,11 +7,11 @@ import cors from "cors";
 import apiRouter from "./routes/api.mjs";
 
 const app = express();
-const port = 8000;
+const port = env.PORT;
 
 app.use(
   cors({
-    origin: `http://${env.DOMAIN}:19006`,
+    origin: `http://${env.DOMAIN}:${env.EXPO_WEB_DEV_PORT}`,
     credentials: true,
   })
 );

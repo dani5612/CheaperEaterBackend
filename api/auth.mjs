@@ -18,7 +18,9 @@ const getUsernameFromAccessToken = (accessToken) => {
 
 /* Refresh tokens
  * @param {String} valid refresh token
- * @return {Object} new refresh and auth token
+ * @return {Object} tokens
+ * @return {String} tokens.accessToken new refresh token
+ * @return {String} tokens.refreshToken new auth token
  */
 const refreshToken = async (refreshToken) => {
   try {
@@ -75,9 +77,10 @@ const refreshToken = async (refreshToken) => {
   }
 };
 
-/*Generate access token
- *@param {Object} Payload the payload to encode in the token
- *@param {String} expiresIn token expiration time, default of 15m
+/* Generate access token
+ * @param {Object} Payload the payload to encode in the token
+ * @param {String} expiresIn token expiration time, default of 15m
+ * @return {String} access token
  */
 const generateAccessToken = (payload, expiresIn = "15m") => {
   return jwt.sign(payload, env.ACCESS_TOKEN_SECRET, {
@@ -85,9 +88,10 @@ const generateAccessToken = (payload, expiresIn = "15m") => {
   });
 };
 
-/*Generate refresh token
- *@param {Object} Payload the payload to encode in the token
- *@param {String} expiresIn token expiration time, default of 15m
+/* Generate refresh token
+ * @param {Object} Payload the payload to encode in the token
+ * @param {String} expiresIn token expiration time, default of 15m
+ * @return {String} refresh token
  */
 const generateRefreshToken = (payload, expiresIn = "24h") => {
   return jwt.sign(payload, env.REFRESH_TOKEN_SECRET, {
@@ -95,8 +99,11 @@ const generateRefreshToken = (payload, expiresIn = "24h") => {
   });
 };
 
-/* Register a new user
- * @param {Object} containing username,email, and password
+/* Register a new user and send email verification
+ * @param {Object} userPayload
+ * @param {String} userPayload.username username for new account
+ * @param {String} userPayload.email email for new account
+ * @param {String} userPayload.password password for new account
  */
 const register = async ({ username, email, password }) => {
   email = email.toLowerCase();
@@ -126,11 +133,31 @@ const register = async ({ username, email, password }) => {
       if (err) {
         console.error(err);
       }
-      await users.insertOne({
+      const newUser = await users.insertOne({
         username: username.toLowerCase(),
         email: email.toLowerCase(),
         password: hash,
+        isEmailVerified: false,
         refreshTokens: [],
+      });
+
+      const registerToken = await createTemporaryUserToken({
+        userId: newUser.insertedId,
+        tokenType: "register",
+      });
+
+      await sendEmail({
+        from: env.SMTP_HOST,
+        to: email,
+        subject: "Verify Your Email Address",
+        emailTemplate: "verifyAccountEmail.html",
+        templatePayload: {
+          username: username,
+          link: `http://${env.DOMAIN}:${env.PORT}/verifyAccountEmail?token=${registerToken}&id=${newUser.insertedId}`,
+          logoUrl:
+            "https://raw.githubusercontent.com/cheaper-eater/frontend/main/assets/logos/logo.png",
+          indexUrl: `http://${env.DOMAIN}:${env.PORT}`,
+        },
       });
     });
   } catch (e) {
@@ -138,9 +165,134 @@ const register = async ({ username, email, password }) => {
   }
 };
 
-/*Login a new user
- *@param {Object} containing email and password
- *@return {Object} with access token and refresh token
+/* Create temporary hashed user token that expires withint 1 hour in indexed collection
+ * @param {Object} userTokenPayload
+ * @param {ObjectId} userTokenPayload.userId the userId to create a token for
+ * @param {String} userTokenPayload.tokenType the type of the token
+ * @return {String} the plainText token
+ */
+const createTemporaryUserToken = async ({ userId, tokenType }) => {
+  const plainToken = crypto.randomBytes(32).toString("hex");
+  await (await getDB()).collection("temporaryTokens").insertOne({
+    createdAt: new Date(),
+    userId: userId,
+    token: await bcrypt.hash(plainToken, SALT_ROUNDS),
+    tokenType: tokenType,
+  });
+  return plainToken;
+};
+
+/* Action on verify
+ * @callback onVerify
+ * @param {db} a mongodb databse instance
+ */
+
+/* Verify if a temporary user token is valid and perform an action if that token
+ * is valid
+ * @param {Object} tokenData
+ * @param {String} tokenData.toketokenToVerify: The plain text token to veriry
+ * @param {String} tokenData.userId: The user the token belongs to
+ * @param {String} tokenData.tokenType: The token type to look for
+ * @param {onVerify} action to perform
+ */
+const onVerifyTemporaryUserToken = async (
+  { tokenToVerify, userId, tokenType },
+  onVerify
+) => {
+  try {
+    if (!userId) {
+      return Promise.reject("missing expected userId");
+    }
+    const db = await getDB();
+    const temporaryTokens = db.collection("temporaryTokens");
+    const userToken = await temporaryTokens.findOne({
+      userId: ObjectId(userId),
+    });
+
+    if (userToken && userToken.tokenType == tokenType) {
+      if (await bcrypt.compare(tokenToVerify, userToken.token)) {
+        onVerify(db);
+      }
+      await temporaryTokens.deleteOne(userToken);
+    } else {
+      return Promise.reject("invalid token");
+    }
+  } catch (e) {
+    console.error(e);
+  }
+};
+
+/* Veriy an account's email address
+ * @param {Object} accountInformation
+ * @param {String} accountInformation.verifyAccountEmailToken the token to verify an email address
+ * @param {String} userId the account id to verify
+ */
+const verifyAccountEmail = async ({ verifyAccountEmailToken, userId }) => {
+  await onVerifyTemporaryUserToken(
+    {
+      tokenToVerify: verifyAccountEmailToken,
+      userId: userId,
+      tokenType: "register",
+    },
+    async (db) => {
+      try {
+        await db
+          .collection("users")
+          .updateOne(
+            { _id: ObjectId(userId) },
+            { $set: { isEmailVerified: true } }
+          );
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  );
+};
+
+/* Reset account password
+ * @param {Object} payload
+ * @param {String} payload.userId the user id for the account
+ * @param {String} payload.newPassword the new password for the account
+ * @param {String} payload.passwordResetToken a token to reset the password
+ */
+const resetAccountPassword = async ({
+  userId,
+  newPassword,
+  passwordResetToken,
+}) => {
+  await onVerifyTemporaryUserToken(
+    {
+      tokenToVerify: passwordResetToken,
+      userId: userId,
+      tokenType: "passwordReset",
+    },
+    async (db) => {
+      try {
+        bcrypt.hash(newPassword, SALT_ROUNDS, async (err, hash) => {
+          if (err) {
+            console.error(err);
+          }
+          await db.collection("users").updateOne(
+            {
+              _id: ObjectId(userId),
+            },
+            { $set: { password: hash } }
+          );
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  );
+};
+
+/* Login a new user
+ * @param {Object} loginPayload
+ * @param {String} loginPayload.email the account email to log into
+ * @param {String} loginPayload.password the account password
+ * @return {Object} loginResponse
+ * @return {String} loginResponse.accessToken token for user access
+ * @return {String} loginResponse.refreshToken token for refresh
  */
 const login = async ({ email, password }) => {
   try {
@@ -149,6 +301,8 @@ const login = async ({ email, password }) => {
 
     if (!user) {
       return Promise.reject("account not found");
+    } else if (!user.isEmailVerified) {
+      return Promise.reject("email not verified");
     }
 
     if (user?.password && (await bcrypt.compare(password, user.password))) {
@@ -168,16 +322,34 @@ const login = async ({ email, password }) => {
 };
 
 /* Logout user
- * @param {String} username to logout
+ * @param {Object} payload
+ * @param {String} payload.username username to logout
+ * @param {String} payload.refreshToken most recent refresh token to remove from refresh Tokens
  */
-const logout = async (username) => {
-  await (await getDB())
-    .collection("users")
-    .updateOne({ username: username }, { $set: { refreshTokens: [] } });
+const logout = async ({ username, refreshToken }) => {
+  const users = (await getDB()).collection("users");
+  const refreshTokens = (await users.findOne({ username: username }))
+    .refreshTokens;
+
+  if (!refreshTokens.includes(refreshToken)) {
+    return Promise.reject("invalid token");
+  }
+
+  await users.updateOne(
+    { username: username },
+    {
+      $set: {
+        refreshTokens: refreshTokens.filter(
+          (rToken) => rToken !== refreshToken
+        ),
+      },
+    }
+  );
 };
 
-/*Send password reset link to user email
- *@param {Object} with account email
+/* Send password reset link to user email
+ * @param {Object} accountPayload
+ * @param {String} accountPayload.email the account's email to reset
  */
 const sendPasswordResetLink = async ({ email }) => {
   try {
@@ -186,12 +358,9 @@ const sendPasswordResetLink = async ({ email }) => {
       .findOne({ email: email });
 
     if (user) {
-      const passwordResetToken = crypto.randomBytes(32).toString("hex");
-
-      await (await getDB()).collection("passwordResetTokens").insertOne({
-        createdAt: new Date(),
+      const passwordResetToken = await createTemporaryUserToken({
         userId: user._id,
-        token: await bcrypt.hash(passwordResetToken, SALT_ROUNDS),
+        tokenType: "passwordReset",
       });
 
       await sendEmail({
@@ -201,53 +370,14 @@ const sendPasswordResetLink = async ({ email }) => {
         emailTemplate: "resetAccountPassword.html",
         templatePayload: {
           username: user.username,
-          link: `${env.DOMAIN}/passwordReset?token=${passwordResetToken}&id=${user._id}`,
+          link: `http://${env.DOMAIN}:${env.PORT}/passwordReset?token=${passwordResetToken}&id=${user._id}`,
+          logoUrl:
+            "https://raw.githubusercontent.com/cheaper-eater/frontend/main/assets/logos/logo.png",
+          indexUrl: `http://${env.DOMAIN}:${env.PORT}`,
         },
       });
     } else {
       return Promise.reject("account not found");
-    }
-  } catch (e) {
-    console.error(e);
-  }
-};
-
-/*Reset account password
- *@param {Object} with userId of account, newPassword,
- *and passwordResetToken to authenticatethe reset
- */
-const resetAccountPassword = async ({
-  userId,
-  newPassword,
-  passwordResetToken,
-}) => {
-  try {
-    const db = await getDB();
-    const passwordResetTokens = db.collection("passwordResetTokens");
-    const resetToken = await passwordResetTokens.findOne({
-      userId: ObjectId(userId),
-    });
-
-    if (resetToken) {
-      if (await bcrypt.compare(passwordResetToken, resetToken.token)) {
-        bcrypt.hash(newPassword, SALT_ROUNDS, async (err, hash) => {
-          if (err) {
-            console.error(err);
-          }
-          await db.collection("users").updateOne(
-            {
-              _id: ObjectId(userId),
-            },
-            { $set: { password: hash } }
-          );
-        });
-      } else {
-        return Promise.reject("token expired");
-      }
-
-      await passwordResetTokens.deleteOne(resetToken);
-    } else {
-      return Promise.reject("invalid token");
     }
   } catch (e) {
     console.error(e);
@@ -259,6 +389,7 @@ export {
   login,
   logout,
   sendPasswordResetLink,
+  verifyAccountEmail,
   refreshToken,
   resetAccountPassword,
   getUsernameFromAccessToken,
