@@ -5,21 +5,21 @@ import { HTTPResponseError } from "../errors/http.mjs";
 
 // store any response cookies to be sent back after search
 // currently this is used to update Postamtes search cookies
-let RES_COOKIES = {};
+let RESPONSE_COOKIES = {};
 
 /* Search postmates
  * @param {string} query the query to search from (ex:pizza, mcdonalds)
  * @return {object} either a stores object or error
  */
-const searchPostmates = async (searchData, reqCookies) => {
+const searchPostmates = async (searchData, requestCookies) => {
   try {
     const postmates = new Postmates();
-    const { data, resCookies } = await postmates.search({
+    const { data, responseCookies } = await postmates.search({
       ...searchData,
-      cookies: reqCookies,
+      cookies: requestCookies,
     });
 
-    RES_COOKIES = { ...RES_COOKIES, ...resCookies };
+    RESPONSE_COOKIES = { ...RESPONSE_COOKIES, ...responseCookies };
 
     return {
       stores: data.data.feedItems.reduce((acc, item) => {
@@ -205,7 +205,7 @@ const search = async (searchData) => {
   ]);
 
   return {
-    cookies: RES_COOKIES,
+    cookies: RESPONSE_COOKIES,
     data: services.map((service, index) => ({
       service: service,
       ...serviceSearchData[index],

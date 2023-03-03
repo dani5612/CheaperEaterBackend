@@ -4,7 +4,6 @@ import jwt_decode from "jwt-decode";
 import fetch from "node-fetch";
 import puppeteer from "puppeteer";
 import { load } from "cheerio";
-import { HTTPResponseError } from "../errors/http.mjs";
 import Service from "./Service.mjs";
 
 class Doordash extends Service {
@@ -28,10 +27,11 @@ class Doordash extends Service {
   }
   /*Parse token data from API response
    * @param {Object} data the API reponse from getting token info
+   * @param {String} tokenField the field the token data is located in
    * @return {Object} parased token data
    */
-  parseTokenData(data) {
-    const { token, refresh_token } = data.token;
+  parseTokenData(data, tokenField = "token") {
+    const { token, refresh_token } = data[tokenField];
     return {
       accessToken: token,
       refreshToken: refresh_token,
@@ -40,159 +40,206 @@ class Doordash extends Service {
   }
 
   /*Retrieve a new accesss token and refresh token using the email and password of an account
-   * @param {String} email
-   * @param {String} pasword
+   * @param {Object} payload
+   * @param {String} payload.email account email
+   * @param {String} payload.pasword account password
    * @return {Object} auth token data
    */
   async auth({ email, password }) {
-    const res = await fetch("https://identity.doordash.com/api/v1/auth/token", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        accept: "application/json",
-        authorization: env.DOORDASH_DEFAULT_AUTH_TOKEN,
-        "accept-language": "en-us",
-        "user-agent": "DoorDash/30357.210623 CFNetwork/1121.2.2 Darwin/19.3.0",
-      },
-      body: JSON.stringify({
-        credentials: {
-          email: email,
-          password: password,
-        },
-      }),
-    });
-
-    if (res.ok) {
-      return await res.json();
-    } else {
-      throw new HTTPResponseError(res);
-    }
+    return await (
+      await this.callServiceAPI(() =>
+        fetch("https://identity.doordash.com/api/v1/auth/token", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            accept: "application/json",
+            authorization: env.DOORDASH_DEFAULT_AUTH_TOKEN,
+            "accept-language": "en-us",
+            "user-agent":
+              "DoorDash/30357.210623 CFNetwork/1121.2.2 Darwin/19.3.0",
+          },
+          body: JSON.stringify({
+            credentials: {
+              email: email,
+              password: password,
+            },
+          }),
+        })
+      )
+    ).json();
   }
 
-  /* Create a new token using credentials for an existing account.
-   * By default, guest account info in env file is used.
-   * This method should only be called if valid token data does
-   * not already exists in the database. If you want to get a token
-   * to use, getToken() should be used instead.
-   * @param {Object} credentials containing email and password of account
-   * @return {Object} newly create token data
+  /*Auto complete locations
+   * @param {String} query the location query
+   * @return {Array} location results
    */
-  async createNewToken(
-    credentials = {
-      email: env.DOORDASH_GUEST_EMAIL,
-      password: env.DOORDASH_GUEST_PASSWORD,
-    }
-  ) {
-    const res = await fetch("https://identity.doordash.com/api/v1/auth/token", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        accept: "application/json",
-        authorization: env.DOORDASH_DEFAULT_AUTH_TOKEN,
-        "accept-language": "en-us",
-        "user-agent": "DoorDash/27397.210527 CFNetwork/1121.2.2 Darwin/19.3.0",
-      },
-      body: JSON.stringify({ credentials: credentials }),
-    });
+  async autocompleteLocation(query) {
+    return await (
+      await this.callServiceAPI(() => {
+        let endpoint = new URL(
+          "https://maps.googleapis.com/maps/api/place/autocomplete/json"
+        );
 
-    if (res.ok) {
-      const tokenData = this.parseTokenData(await res.json());
-      await this.updateToken(tokenData);
-      return tokenData;
-    } else {
-      throw new HTTPResponseError(res);
-    }
+        const params = new URLSearchParams({
+          input: query,
+          key: env.DOORDASH_GOOGLE_MAPS_API_KEY,
+          language: "en",
+        });
+
+        endpoint.search = params;
+        return fetch(endpoint.toString(), { method: "GET" });
+      })
+    ).json();
   }
 
-  /* Create a new token using a new account. Note that this method needs more work.
-   * and is not yet complete. It looks like accounts created with the method do not have the
-   * necessary permissions. This method should only be called
+  /* Add a default consumer address for an account.
+   * Note that this is reqired to give guest accounts necessary permissions.
+   * Currently the location defaults to long beach
+   * @param {String} accessToken the token associated with an account
+   * @return {Object} set data
+   */
+  async addDefaultConsumerAddress(accessToken) {
+    return await (
+      await this.callServiceAPI(() =>
+        fetch(
+          "https://consumer-mobile-bff.doordash.com/graphql/AddDefaultConsumerAddress",
+          {
+            method: "POST",
+            headers: {
+              accept: "application/json",
+              authorization: `JWT ${accessToken}`,
+              "accept-language": "en-US",
+              "client-version": "android v15.92.12 b15092129",
+              "user-agent": "DoorDashConsumer/Android 15.92.12",
+              "x-experience-id": "doordash",
+              "dd-user-locale": "en-US",
+              "x-bff-error-format": "v2",
+              "content-type": "application/json; charset=utf-8",
+            },
+            body: JSON.stringify({
+              operationName: "AddDefaultConsumerAddress",
+              variables: {
+                addAddressInput: {
+                  address: "Long Beach, CA, USA",
+                  addressType: "UNSPECIFIED",
+                  dropOffPreferences: [
+                    {
+                      instructions: "",
+                      optionId: "DdCid:_&1_1",
+                      setSelected: false,
+                    },
+                    {
+                      instructions: "",
+                      optionId: "DdCid:_&1_2",
+                      setSelected: true,
+                    },
+                  ],
+                  googlePlaceId: "ChIJWdeZQOjKwoARqo8qxPo6AKE",
+                  manualLatLng: null,
+                  setDefault: true,
+                  subpremise: "",
+                },
+                offset: 0,
+                limit: 100,
+              },
+              query:
+                "mutation AddDefaultConsumerAddress($addAddressInput: AddConsumerAddressInput!, $offset: Int!, $limit: Int!) { addConsumerAddress(addAddressInput: $addAddressInput) { __typename ... on Consumer { id defaultAddress { __typename ... consumerAddress ... on ContractError { ...contractError reason } } availableAddresses(offset: $offset, limit: $limit) { __typename ... consumerAddress } } } } fragment consumerAddress on ConsumerAddress { __typename id street city zipCode state submarketId subpremise type geoLocation { __typename lat lng } adjustedGeoLocation { __typename lat lng } shortname country { __typename name shortName } district { __typename id } printableAddress { __typename line1 line2 } dropoffOptions { __typename ... on ConsumerDropOffOption { id disabledMessage displayString instructions isSelected isEnabled placeholderInstructionText } } } fragment contractError on ContractError { __typename correlationId debugMessage errorCode localizedMessage localizedTitle reason }",
+            }),
+          }
+        )
+      )
+    ).json();
+  }
+
+  /* Create a new token using a new account.
+   * This method should only be called
    * if valid token data does not already exists in the database.
    * if you want to get a token to use, getToken() should be used
    * instead.
    * @return {Object} newly create token data
    */
-  async createNewTokenWithNewAccount() {
-    const password = uuidv4();
-    const res = await fetch(
-      "https://consumer-mobile-bff.doordash.com/v1/consumer_profile/create_full_guest",
-      {
-        method: "POST",
-        headers: {
-          "client-version": "ios v4.41.2 b30357.210623",
-          "user-agent":
-            "DoordashConsumer/4.41.2 (iPhone; iOS 13.3.1; Scale/3.0)",
-          "x-experience-id": "doordash",
-          "x-support-delivery-fee-sort": "true",
-          "x-support-partner-dashpass": "true",
-          "x-ios-bundle-identifier": "doordash.DoorDashConsumer",
-          "x-support-nested-menu": "true",
-          "x-support-schedule-save": "true",
-          "accept-language": "en-US;q=1.0, es-MX;q=0.9",
-          accept: "application/json",
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          password: password,
-        }),
-      }
-    );
-    if (res.ok) {
-      const { email } = await res.json();
-      const tokenData = this.parseTokenData(
-        await this.auth({ email: email, password: password })
-      );
-      await this.updateToken(tokenData);
-      return tokenData;
-    } else {
-      throw new HTTPResponseError(res);
-    }
+  async createNewToken() {
+    const data = await (
+      await this.callServiceAPI(() =>
+        fetch(
+          "https://consumer-mobile-bff.doordash.com/v1/consumer_profile/create_full_guest",
+          {
+            method: "POST",
+            headers: {
+              "client-version": "android v15.92.12 b15092129",
+              "user-agent":
+                "DoorDashConsumer/15.92.12 (Android 10; Motorola MotoG3)",
+              "x-experience-id": "doordash",
+              "x-support-delivery-fee-sort": "true",
+              "x-support-partner-dashpass": "true",
+              "x-ios-bundle-identifier": "doordash.DoorDashConsumer",
+              "x-support-nested-menu": "true",
+              "x-support-schedule-save": "true",
+              "accept-language": "en-US;q=1.0, es-MX;q=0.9",
+              accept: "application/json",
+              "content-type": "application/json",
+            },
+            body: JSON.stringify({
+              password: uuidv4(),
+            }),
+          }
+        )
+      )
+    ).json();
+
+    const tokenData = this.parseTokenData(data, "auth_token");
+    await this.addDefaultConsumerAddress(tokenData.accessToken);
+    await this.updateToken(tokenData);
+    return tokenData;
   }
 
   /* Search query
+   * @param {Object} payload
    * @param {String} query the query to search
+   * @param {String} payload.location.latitude location latitude
+   * @param {String} location.longitude location longitude
    * @return {Object} the search result or HTTPResponseError
    */
   async search({ query, location }) {
-    let endpoint = new URL(
-      "https://consumer-mobile-bff.doordash.com/v3/search"
-    );
-    const params = new URLSearchParams({
-      query: query,
-      lat: location.latitude,
-      lng: location.longitude,
-    });
+    return await (
+      await this.callServiceAPI(async () => {
+        let endpoint = new URL(
+          "https://consumer-mobile-bff.doordash.com/v3/search"
+        );
+        const params = new URLSearchParams({
+          query: query,
+          lat: location.latitude,
+          lng: location.longitude,
+        });
 
-    endpoint.search = params;
+        endpoint.search = params;
 
-    const res = await fetch(endpoint.toString(), {
-      method: "GET",
-      headers: {
-        "client-version": "ios v4.41.2 b30357.210623",
-        "user-agent": "DoordashConsumer/4.41.2 (iPhone; iOS 13.3.1; Scale/3.0)",
-        "x-experience-id": "doordash",
-        "x-support-delivery-fee-sort": "true",
-        "x-support-partner-dashpass": "true",
-        "x-ios-bundle-identifier": "doordash.DoorDashConsumer",
-        "x-support-nested-menu": "true",
-        "x-support-schedule-save": "true",
-        authorization: `JWT ${await this.getToken()}`,
-        "accept-language": "en-US;q=1.0, es-MX;q=0.9",
-        accept: "*/*",
-      },
-    });
-
-    if (res.ok) {
-      return await res.json();
-    } else {
-      throw new HTTPResponseError(res);
-    }
+        return fetch(endpoint.toString(), {
+          method: "GET",
+          headers: {
+            "client-version": "ios v4.41.2 b30357.210623",
+            "user-agent":
+              "DoordashConsumer/4.41.2 (iPhone; iOS 13.3.1; Scale/3.0)",
+            "x-experience-id": "doordash",
+            "x-support-delivery-fee-sort": "true",
+            "x-support-partner-dashpass": "true",
+            "x-ios-bundle-identifier": "doordash.DoorDashConsumer",
+            "x-support-nested-menu": "true",
+            "x-support-schedule-save": "true",
+            authorization: `JWT ${(await this.getToken()).accessToken}`,
+            "accept-language": "en-US;q=1.0, es-MX;q=0.9",
+            accept: "*/*",
+          },
+        });
+      })
+    ).json();
   }
   /*
    * Get store Menu
-   * @param {storeID}, ID of relevant store
-   * @return {info, menu}, two JSONs. Info holds restaraunt info,
-   * menu holds the restaraunt menu;
+   * @param {String} storeID of relevant store
+   * @return {Object} data
+   * @return {Object} data.info store information
+   * @return {Object} data.menu store menu
    */
   async getStore(storeID) {
     const browser = await puppeteer.launch();
@@ -212,7 +259,7 @@ class Doordash extends Service {
       try {
         JSON.parse(scriptText);
       } catch (e) {
-        console.log("Error: Data is NOT a JSON");
+        console.error("Error: Data is NOT a JSON");
       }
       scriptTexts.push(scriptText);
     });
