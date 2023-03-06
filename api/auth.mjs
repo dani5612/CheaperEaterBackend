@@ -99,6 +99,61 @@ const generateRefreshToken = (payload, expiresIn = "24h") => {
   });
 };
 
+/*Send account verification email
+ * @param {Object} payload
+ * @param {String} payload.email user email to send verification to
+ * @param {ObjectId} payload.userId account user id
+ * @param {String} payload.username account username
+ */
+const sendAccountVerificationEmail = async ({ email, userId, username }) => {
+  const registerToken = await createTemporaryUserToken({
+    userId: userId,
+    tokenType: "register",
+  });
+  await sendEmail({
+    from: env.SMTP_HOST,
+    to: email,
+    subject: "Verify Your Email Address",
+    emailTemplate: "verifyAccountEmail.html",
+    templatePayload: {
+      username: username,
+      link: `http://${env.DOMAIN}:${env.PORT}/verifyAccountEmail?token=${registerToken}&id=${userId}`,
+      logoUrl:
+        "https://raw.githubusercontent.com/cheaper-eater/frontend/main/assets/logos/logo.png",
+      indexUrl: `http://${env.DOMAIN}:${env.PORT}`,
+    },
+  });
+};
+
+/* Resend verification eamil
+ * @param {String} userId of the account to resent the
+ * verification eamil to
+ */
+const resendVerificationEmail = async (userId) => {
+  try {
+    const user = await (await getDB())
+      .collection("users")
+      .findOne({ _id: ObjectId(userId) });
+
+    if (!user) {
+      return Promise.reject("user not found");
+    }
+
+    if (!user.isEmailVerified) {
+      await sendAccountVerificationEmail({
+        email: user.email,
+        userId: user._id,
+        username: user.username,
+      });
+    } else {
+      return Promise.reject("email already verified");
+    }
+  } catch (e) {
+    console.error(e);
+    return Promise.reject("invaid user id");
+  }
+};
+
 /* Register a new user and send email verification
  * @param {Object} userPayload
  * @param {String} userPayload.username username for new account
@@ -141,23 +196,10 @@ const register = async ({ username, email, password }) => {
         refreshTokens: [],
       });
 
-      const registerToken = await createTemporaryUserToken({
+      await sendAccountVerificationEmail({
+        username: username,
+        email: email,
         userId: newUser.insertedId,
-        tokenType: "register",
-      });
-
-      await sendEmail({
-        from: env.SMTP_HOST,
-        to: email,
-        subject: "Verify Your Email Address",
-        emailTemplate: "verifyAccountEmail.html",
-        templatePayload: {
-          username: username,
-          link: `http://${env.DOMAIN}:${env.PORT}/verifyAccountEmail?token=${registerToken}&id=${newUser.insertedId}`,
-          logoUrl:
-            "https://raw.githubusercontent.com/cheaper-eater/frontend/main/assets/logos/logo.png",
-          indexUrl: `http://${env.DOMAIN}:${env.PORT}`,
-        },
       });
     });
   } catch (e) {
@@ -172,14 +214,18 @@ const register = async ({ username, email, password }) => {
  * @return {String} the plainText token
  */
 const createTemporaryUserToken = async ({ userId, tokenType }) => {
-  const plainToken = crypto.randomBytes(32).toString("hex");
-  await (await getDB()).collection("temporaryTokens").insertOne({
-    createdAt: new Date(),
-    userId: userId,
-    token: await bcrypt.hash(plainToken, SALT_ROUNDS),
-    tokenType: tokenType,
-  });
-  return plainToken;
+  try {
+    const plainToken = crypto.randomBytes(32).toString("hex");
+    await (await getDB()).collection("temporaryTokens").insertOne({
+      createdAt: new Date(),
+      userId: userId,
+      token: await bcrypt.hash(plainToken, SALT_ROUNDS),
+      tokenType: tokenType,
+    });
+    return plainToken;
+  } catch (e) {
+    console.error(e);
+  }
 };
 
 /* Action on verify
@@ -390,6 +436,7 @@ export {
   logout,
   sendPasswordResetLink,
   verifyAccountEmail,
+  resendVerificationEmail,
   refreshToken,
   resetAccountPassword,
   getUsernameFromAccessToken,
