@@ -126,8 +126,8 @@ const sendAccountVerificationEmail = async ({ email, userId, username }) => {
 };
 
 /* Resend verification eamil
- * @param {String} userId of the account to resent the
- * verification eamil to
+ * @param {String} userId of the account to resend the
+ * verification email to
  */
 const resendVerificationEmail = async (userId) => {
   try {
