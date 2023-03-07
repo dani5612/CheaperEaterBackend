@@ -201,7 +201,7 @@ const search = async (searchData) => {
   const serviceSearchData = await Promise.all([
     searchPostmates(searchData, cookies),
     searchGrubhub(searchData),
-    searchDoordash(searchData),
+    //searchDoordash(searchData),
   ]);
 
   return {
