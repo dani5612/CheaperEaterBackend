@@ -117,7 +117,7 @@ const sendAccountVerificationEmail = async ({ email, userId, username }) => {
     emailTemplate: "verifyAccountEmail.html",
     templatePayload: {
       username: username,
-      link: `http://${env.DOMAIN}:${env.PORT}/verifyAccountEmail?token=${registerToken}&id=${userId}`,
+      link: `http://${env.DOMAIN}:${env.EXPO_WEB_DEV_PORT}/verifyAccountEmail?token=${registerToken}&id=${userId}`,
       logoUrl:
         "https://raw.githubusercontent.com/cheaper-eater/frontend/main/assets/logos/logo.png",
       indexUrl: `http://${env.DOMAIN}:${env.PORT}`,

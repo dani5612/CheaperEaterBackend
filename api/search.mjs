@@ -1,25 +1,27 @@
+/* eslint-disable no-unused-vars */
 import Postmates from "../services/Postmates.mjs";
 import Grubhub from "../services/Grubhub.mjs";
 import Doordash from "../services/Doordash.mjs";
 import { HTTPResponseError } from "../errors/http.mjs";
+import { searchDataRemoveDuplicate } from "../utils/data/DataProcessing.mjs";
 
 // store any response cookies to be sent back after search
 // currently this is used to update Postamtes search cookies
-let RES_COOKIES = {};
+let RESPONSE_COOKIES = {};
 
 /* Search postmates
  * @param {string} query the query to search from (ex:pizza, mcdonalds)
  * @return {object} either a stores object or error
  */
-const searchPostmates = async (searchData, reqCookies) => {
+const searchPostmates = async (searchData, requestCookies) => {
   try {
     const postmates = new Postmates();
-    const { data, resCookies } = await postmates.search({
+    const { data, responseCookies } = await postmates.search({
       ...searchData,
-      cookies: reqCookies,
+      cookies: requestCookies,
     });
 
-    RES_COOKIES = { ...RES_COOKIES, ...resCookies };
+    RESPONSE_COOKIES = { ...RESPONSE_COOKIES, ...responseCookies };
 
     return {
       stores: data.data.feedItems.reduce((acc, item) => {
@@ -84,8 +86,8 @@ const searchGrubhub = async (searchData) => {
           id: restaurant_id,
           title: name,
           location: {
-            latitude: address.latitude,
-            longitude: address.longitude,
+            latitude: +address.latitude,
+            longitude: +address.longitude,
           },
           deliveryFee: delivery_fee.price,
           estimatedDeliveryTime: delivery_time_estimate,
@@ -197,19 +199,25 @@ const search = async (searchData) => {
     decodeURIComponent(cookies["uev2.loc"])
   );
   searchData = { ...searchData, location: { latitude, longitude } };
-  const services = ["postmates", "grubhub", "doordash"];
+  const services = [
+    "postmates",
+    "grubhub",
+    // , "doordash"
+  ];
   const serviceSearchData = await Promise.all([
     searchPostmates(searchData, cookies),
     searchGrubhub(searchData),
-    searchDoordash(searchData),
+    // searchDoordash(searchData),
   ]);
 
   return {
-    cookies: RES_COOKIES,
-    data: services.map((service, index) => ({
-      service: service,
-      ...serviceSearchData[index],
-    })),
+    cookies: RESPONSE_COOKIES,
+    data: searchDataRemoveDuplicate(
+      services.map((service, index) => ({
+        service: service,
+        ...serviceSearchData[index],
+      }))
+    ),
   };
 };
 
