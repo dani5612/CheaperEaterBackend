@@ -99,7 +99,6 @@ const searchDataRemoveDuplicate = (searchData) => {
 
   var totalObjs = duplicateObjs.concat(nonDuplicateObjs);
   totalObjs.forEach((element) => {
-    delete element.id;
     delete element.matched;
     delete element.service;
   });
