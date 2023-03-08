@@ -1,7 +1,36 @@
+import { HTTPResponseError } from "../errors/http.mjs";
 import { getDB } from "../database.mjs";
+
+// add onExternalAPICall() -> lmabda for all api calls and errors
 
 class Service {
   constructor() {}
+
+  /* External fetch API call
+   * @callback call
+   * @return {Object} fetch response
+   */
+
+  /* Action on unsucessfull (error) API call
+   * @callback onSuccess
+   */
+
+  /*External API call wrapper
+   * @param {call} function to call api
+   * @param {onError} callback on error
+   * @return fetch response
+   */
+  async callServiceAPI(call, onError) {
+    const res = await call();
+    if (res.ok) {
+      return res;
+    } else {
+      if (onError) {
+        await onError(res);
+      }
+      throw new HTTPResponseError(res);
+    }
+  }
 
   /*Checks if tokens are valid using database experitation times
    *@return {Object} boolean values indicating the validity of both the refresh
