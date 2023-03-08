@@ -153,7 +153,7 @@ const register = async ({ username, email, password }) => {
         emailTemplate: "verifyAccountEmail.html",
         templatePayload: {
           username: username,
-          link: `http://${env.DOMAIN}:${env.PORT}/verifyAccountEmail?token=${registerToken}&id=${newUser.insertedId}`,
+          link: `http://${env.DOMAIN}:${env.EXPO_WEB_DEV_PORT}/verifyAccountEmail?token=${registerToken}&id=${newUser.insertedId}`,
           logoUrl:
             "https://raw.githubusercontent.com/cheaper-eater/frontend/main/assets/logos/logo.png",
           indexUrl: `http://${env.DOMAIN}:${env.PORT}`,
