@@ -216,7 +216,8 @@ const search = async (searchData) => {
       services.map((service, index) => ({
         service: service,
         ...serviceSearchData[index],
-      }))
+      })),
+      { latitude, longitude }
     ),
   };
 };

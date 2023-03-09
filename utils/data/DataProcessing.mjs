@@ -23,10 +23,11 @@ import stringSimilarity from "string-similarity";
  *		}
  *  }, ...]
  */
-const searchDataRemoveDuplicate = (searchData) => {
+const searchDataRemoveDuplicate = (searchData, currentLocation) => {
   var duplicateObjs = [];
   var nonDuplicateObjs = [];
   var tempJson = [];
+  console.log(currentLocation);
 
   const itr = searchData.values();
   for (const v of itr) {
@@ -101,6 +102,30 @@ const searchDataRemoveDuplicate = (searchData) => {
   totalObjs.forEach((element) => {
     delete element.matched;
     delete element.service;
+  });
+
+  const degreesToRadians = (degrees) => {
+    return (degrees * Math.PI) / 180;
+  };
+
+  const distanceInMiles = (x) => {
+    let earthRadius = 6371;
+    let startLat = degreesToRadians(currentLocation.latitude);
+    let startLon = degreesToRadians(currentLocation.longitude);
+    let destLat = degreesToRadians(x.location.latitude);
+    let destLon = degreesToRadians(x.location.longitude);
+    return (
+      Math.acos(
+        Math.sin(startLat) * Math.sin(destLat) +
+          Math.cos(startLat) * Math.cos(destLat) * Math.cos(startLon - destLon)
+      ) *
+      earthRadius *
+      0.62137
+    );
+  };
+
+  totalObjs.sort((a, b) => {
+    return distanceInMiles(a) - distanceInMiles(b);
   });
 
   return totalObjs;
