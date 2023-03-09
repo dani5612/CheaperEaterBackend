@@ -27,7 +27,6 @@ const searchDataRemoveDuplicate = (searchData, currentLocation) => {
   var duplicateObjs = [];
   var nonDuplicateObjs = [];
   var tempJson = [];
-  console.log(currentLocation);
 
   const itr = searchData.values();
   for (const v of itr) {
@@ -36,8 +35,8 @@ const searchDataRemoveDuplicate = (searchData, currentLocation) => {
         service: v.service,
         title: element.title,
         location: {
-          latitude: +element.location.latitude.toFixed(4),
-          longitude: +element.location.longitude.toFixed(4),
+          latitude: +element.location.latitude,
+          longitude: +element.location.longitude,
         },
         id: element.id,
         ids: {
