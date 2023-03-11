@@ -23,7 +23,7 @@ import stringSimilarity from "string-similarity";
  *		}
  *  }, ...]
  */
-const searchDataRemoveDuplicate = (searchData) => {
+const searchDataRemoveDuplicate = (searchData, currentLocation) => {
   var duplicateObjs = [];
   var nonDuplicateObjs = [];
   var tempJson = [];
@@ -35,8 +35,8 @@ const searchDataRemoveDuplicate = (searchData) => {
         service: v.service,
         title: element.title,
         location: {
-          latitude: +element.location.latitude.toFixed(4),
-          longitude: +element.location.longitude.toFixed(4),
+          latitude: +element.location.latitude,
+          longitude: +element.location.longitude,
         },
         id: element.id,
         ids: {
@@ -101,6 +101,42 @@ const searchDataRemoveDuplicate = (searchData) => {
   totalObjs.forEach((element) => {
     delete element.matched;
     delete element.service;
+  });
+
+  /**
+   * Converts degrees into radians
+   * @param {Number} degrees you want to covert into radians
+   * @returns the radians values of the degrees you entered in the parameter
+   */
+  const degreesToRadians = (degrees) => {
+    return (degrees * Math.PI) / 180;
+  };
+
+  /**
+   * Function to calculate distance in miles between current lat-lon and given lat-lon in the argument
+   * @param {Number} lat destination latitude in degrees
+   * @param {Number} lon destination longitude in degrees
+   * @returns The distance in miles between the current location and entered destination location
+   */
+  const distanceInMiles = (lat, lon) => {
+    let earthRadiusInMiles = 3958.74827;
+    let startLat = degreesToRadians(currentLocation.latitude);
+    let startLon = degreesToRadians(currentLocation.longitude);
+    let destLat = degreesToRadians(lat);
+    let destLon = degreesToRadians(lon);
+    return (
+      Math.acos(
+        Math.sin(startLat) * Math.sin(destLat) +
+          Math.cos(startLat) * Math.cos(destLat) * Math.cos(startLon - destLon)
+      ) * earthRadiusInMiles
+    );
+  };
+
+  totalObjs.sort((a, b) => {
+    return (
+      distanceInMiles(a.location.latitude, a.location.longitude) -
+      distanceInMiles(b.location.latitude, b.location.longitude)
+    );
   });
 
   return totalObjs;
