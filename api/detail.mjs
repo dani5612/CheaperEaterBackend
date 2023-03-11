@@ -93,7 +93,9 @@ const parseGrubhubStore = (storeData) => {
             name: name,
             description: description,
             price: price.amount,
-            image: `${media_image.base_url}${media_image.public_id}`,
+            image: media_image
+              ? `${media_image.base_url}${media_image.public_id}`
+              : "",
           })
         ),
       })
@@ -130,28 +132,89 @@ const parseDoorDashStore = (storeData) => {
     })),
   };
 };
-/*Get detail store information
- * @param {String} service the name of the service the store belongs to
- * @param {String} storeId the id of the store
+
+/*Get detail store information for the specified services
+ * @param {Array} storeIds objects with services and corresponding
+ * store ids ex: {"postmates": "id"}
  * @return {Object} store information
  */
-const detailStore = async ({ service, storeId }) => {
+const detailStore = async (serviceIds) => {
   const services = {
-    postmates: Postmates,
-    grubhub: Grubhub,
-    doordash: Doordash,
+    postmates: { instance: Postmates, parser: parsePostmatesStore },
+    grubhub: { instance: Grubhub, parser: parseGrubhubStore },
+    doordash: { instance: Doordash, parser: parseDoorDashStore },
   };
-  const serviceInstance = new services[service]();
-  const store = await serviceInstance.getStore(storeId);
 
-  switch (service) {
-    case "postmates":
-      return parsePostmatesStore(store);
-    case "grubhub":
-      return parseGrubhubStore(store);
-    case "doordash":
-      return parseDoorDashStore(store);
-  }
+  return Promise.all(
+    serviceIds.reduce((accServices, { service, id }) => {
+      if (id) {
+        accServices.push(
+          new services[service].instance().getStore(id).then((store) => ({
+            service: service,
+            ...services[service].parser(store),
+          }))
+        );
+      }
+      return accServices;
+    }, [])
+  ).then((serviceStores) => {
+    let menu = {};
+
+    const defaultService = serviceStores[0];
+
+    // settingup menu hashmap structure
+    for (const { category, categoryId, items } of defaultService.menu) {
+      let itemHashMap = {};
+      for (const item of items) {
+        itemHashMap[item.name] = {
+          id: item.id,
+          name: item.name,
+          description: item.description,
+          prices: { [defaultService.service]: item.price },
+          image: item.image,
+          subsectionId: item.subsectionId,
+          ids: { [defaultService.service]: item.id },
+        };
+      }
+      menu[category] = {
+        categoryId: categoryId,
+        categoryIds: { [defaultService.service]: categoryId },
+        category: category,
+        items: itemHashMap,
+      };
+    }
+
+    serviceStores.shift();
+
+    // merging menu items of the same category
+    for (const serviceStore of serviceStores) {
+      for (const { categoryId, category, items } of serviceStore.menu) {
+        menu[category].categoryIds[serviceStore.service] = categoryId;
+        for (const item of items) {
+          menu[category].items[item.name].prices[serviceStore.service] =
+            item.price;
+          menu[category].items[item.name].ids[serviceStore.service] = item.id;
+        }
+      }
+    }
+
+    // removing application specific categories
+    // postmates
+    delete menu["Picked for you"];
+
+    return {
+      id: defaultService.id,
+      name: defaultService.name,
+      image: defaultService.image,
+      hours: defaultService.hours,
+      location: defaultService.location,
+      // flattening hashmaps as arrays
+      menu: Object.values(menu).map((category) => ({
+        ...category,
+        items: Object.values(category.items),
+      })),
+    };
+  });
 };
 
 export { detailLocation, detailStore };
