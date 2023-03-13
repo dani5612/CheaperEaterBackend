@@ -133,6 +133,40 @@ const parseDoorDashStore = (storeData) => {
   };
 };
 
+/* Add category to menu
+ * @param {Object} category
+ * @param {String} category.name the name of the category
+ * @param {String} category.id the id of the cateogry
+ * @param {Object} menu to add category to
+ * @param {Object} items to add to category
+ * @param {String} service name of default / first service
+ */
+const addCategoryToMenu = ({ category, menu, items, service }) => {
+  menu[category.name] = {
+    categoryId: category.id,
+    categoryIds: { [service]: category.id },
+    category: category,
+    items: items,
+  };
+};
+
+/* Add item to menu
+ * @param {Object} categoryItems cateogry items to add item to
+ * @param {Objet} item to add
+ * @param {String} service name of default / first service
+ */
+const addItemToMenu = ({ categoryItems, item, service }) => {
+  categoryItems[item.name] = {
+    id: item.id,
+    name: item.name,
+    description: item.description,
+    prices: { [service]: item.price },
+    image: item.image,
+    subsectionId: item.subsectionId,
+    ids: { [service]: item.id },
+  };
+};
+
 /*Get detail store information for the specified services
  * @param {Array} storeIds objects with services and corresponding
  * store ids ex: {"postmates": "id"}
@@ -162,26 +196,20 @@ const detailStore = async (serviceIds) => {
 
     const defaultService = serviceStores[0];
 
-    // settingup menu hashmap structure
     for (const { category, categoryId, items } of defaultService.menu) {
-      let itemHashMap = {};
+      addCategoryToMenu({
+        category: { id: categoryId, name: category },
+        menu: menu,
+        items: {},
+        service: defaultService.service,
+      });
       for (const item of items) {
-        itemHashMap[item.name] = {
-          id: item.id,
-          name: item.name,
-          description: item.description,
-          prices: { [defaultService.service]: item.price },
-          image: item.image,
-          subsectionId: item.subsectionId,
-          ids: { [defaultService.service]: item.id },
-        };
+        addItemToMenu({
+          categoryItems: menu[category].items,
+          service: defaultService.service,
+          item: item,
+        });
       }
-      menu[category] = {
-        categoryId: categoryId,
-        categoryIds: { [defaultService.service]: categoryId },
-        category: category,
-        items: itemHashMap,
-      };
     }
 
     serviceStores.shift();
@@ -189,11 +217,33 @@ const detailStore = async (serviceIds) => {
     // merging menu items of the same category
     for (const serviceStore of serviceStores) {
       for (const { categoryId, category, items } of serviceStore.menu) {
-        menu[category].categoryIds[serviceStore.service] = categoryId;
-        for (const item of items) {
-          menu[category].items[item.name].prices[serviceStore.service] =
-            item.price;
-          menu[category].items[item.name].ids[serviceStore.service] = item.id;
+        if (menu[category]) {
+          menu[category].categoryIds[serviceStore.service] = categoryId;
+          for (const item of items) {
+            if (menu[category].items[item.name]) {
+              console.log(item.name);
+              menu[category].items[item.name].prices[serviceStore.service] =
+                item.price;
+              menu[category].items[item.name].ids[serviceStore.service] =
+                item.id;
+            }
+            // if item does not already exist, add it
+            else {
+              addItemToMenu({
+                categoryItems: menu[category].items,
+                service: serviceStore.service,
+                item: item,
+              });
+            }
+          }
+          // if category does not already exist, add it
+        } else {
+          addCategoryToMenu({
+            category: { id: categoryId, name: category },
+            menu: menu,
+            items: {},
+            service: serviceStore.service,
+          });
         }
       }
     }
