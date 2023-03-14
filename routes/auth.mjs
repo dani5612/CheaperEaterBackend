@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireAuthentication } from "../middleware.mjs";
 import {
   register,
+  resendVerificationEmail,
   login,
   logout,
   sendPasswordResetLink,
@@ -29,6 +30,16 @@ authRouter.post("/register", async (req, res) => {
   try {
     await register(req.body);
     res.json({ message: "account created" });
+  } catch (e) {
+    res.status(400);
+    res.json({ error: e });
+  }
+});
+
+authRouter.post("/resendVerificationEmail", async (req, res) => {
+  try {
+    await resendVerificationEmail(req.body.userId);
+    res.sendStatus(200);
   } catch (e) {
     res.status(400);
     res.json({ error: e });
