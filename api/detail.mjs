@@ -145,7 +145,7 @@ const addCategoryToMenu = ({ category, menu, items, service }) => {
   menu[category.name] = {
     categoryId: category.id,
     categoryIds: { [service]: category.id },
-    category: category,
+    category: category.name,
     items: items,
   };
 };
