@@ -172,7 +172,7 @@ const addItemToMenu = ({ categoryItems, item, service }) => {
  * store ids ex: {"postmates": "id"}
  * @return {Object} store information
  */
-const detailStore = async (serviceIds) => {
+const detailStore = async ({ serviceIds, page }) => {
   const services = {
     postmates: { instance: Postmates, parser: parsePostmatesStore },
     grubhub: { instance: Grubhub, parser: parseGrubhubStore },
@@ -221,7 +221,6 @@ const detailStore = async (serviceIds) => {
           menu[category].categoryIds[serviceStore.service] = categoryId;
           for (const item of items) {
             if (menu[category].items[item.name]) {
-              console.log(item.name);
               menu[category].items[item.name].prices[serviceStore.service] =
                 item.price;
               menu[category].items[item.name].ids[serviceStore.service] =
@@ -251,6 +250,17 @@ const detailStore = async (serviceIds) => {
     // removing application specific categories
     // postmates
     delete menu["Picked for you"];
+    // flattening hashmaps as arrays
+
+    let menuPages = {};
+    let pageIndex = 0;
+
+    for (const category of Object.values(menu)) {
+      menuPages[++pageIndex] = {
+        ...category,
+        items: Object.values(category.items),
+      };
+    }
 
     return {
       id: defaultService.id,
@@ -258,11 +268,8 @@ const detailStore = async (serviceIds) => {
       image: defaultService.image,
       hours: defaultService.hours,
       location: defaultService.location,
-      // flattening hashmaps as arrays
-      menu: Object.values(menu).map((category) => ({
-        ...category,
-        items: Object.values(category.items),
-      })),
+      menu: menuPages[page],
+      maxPages: pageIndex,
     };
   });
 };
