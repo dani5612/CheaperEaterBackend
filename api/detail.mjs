@@ -47,20 +47,28 @@ const parsePostmatesStore = (storeData) => {
       zipCode: location.postalCode,
       country: location.country,
     },
-    menu: catalogSectionsMap[sections[0].uuid].map((catalogSection) => ({
-      categoryId: catalogSection.catalogSectionUUID,
-      category: catalogSection.payload.standardItemsPayload.title.text,
-      items: catalogSection.payload.standardItemsPayload.catalogItems.map(
-        (item) => ({
-          id: item.uuid,
-          name: item.title,
-          description: item.itemDescription,
-          price: item.price,
-          image: item.imageUrl,
-          subsectionId: item.subsectionUuid,
-        })
-      ),
-    })),
+    menu: catalogSectionsMap[sections[0].uuid].reduce(
+      (accCategory, catalogSection) => {
+        if (catalogSection.type == "VERTICAL_GRID") {
+          accCategory.push({
+            categoryId: catalogSection.catalogSectionUUID,
+            category: catalogSection.payload.standardItemsPayload.title.text,
+            items: catalogSection.payload.standardItemsPayload.catalogItems.map(
+              (item) => ({
+                id: item.uuid,
+                name: item.title,
+                description: item.itemDescription,
+                price: item.price,
+                image: item.imageUrl,
+                subsectionId: item.subsectionUuid,
+              })
+            ),
+          });
+        }
+        return accCategory;
+      },
+      []
+    ),
   };
 };
 
