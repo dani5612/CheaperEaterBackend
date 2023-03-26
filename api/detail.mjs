@@ -180,7 +180,7 @@ const addItemToMenu = ({ categoryItems, item, service }) => {
  * store ids ex: {"postmates": "id"}
  * @return {Object} store information
  */
-const detailStore = async ({ serviceIds, page }) => {
+const detailStore = async (serviceIds) => {
   const services = {
     postmates: { instance: Postmates, parser: parsePostmatesStore },
     grubhub: { instance: Grubhub, parser: parseGrubhubStore },
@@ -260,24 +260,16 @@ const detailStore = async ({ serviceIds, page }) => {
     delete menu["Picked for you"];
     // flattening hashmaps as arrays
 
-    let menuPages = {};
-    let pageIndex = 0;
-
-    for (const category of Object.values(menu)) {
-      menuPages[++pageIndex] = {
-        ...category,
-        items: Object.values(category.items),
-      };
-    }
-
     return {
       id: defaultService.id,
       name: defaultService.name,
       image: defaultService.image,
       hours: defaultService.hours,
       location: defaultService.location,
-      menu: menuPages[page],
-      maxPages: pageIndex,
+      menu: Object.values(menu).map((category) => ({
+        ...category,
+        items: Object.values(category.items),
+      })),
     };
   });
 };
