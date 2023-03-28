@@ -189,7 +189,7 @@ const detailStore = async (serviceIds) => {
 
   return Promise.all(
     serviceIds.reduce((accServices, { service, id }) => {
-      if (id) {
+      if (id && id != "null") {
         accServices.push(
           new services[service].instance().getStore(id).then((store) => ({
             service: service,
@@ -225,32 +225,30 @@ const detailStore = async (serviceIds) => {
     // merging menu items of the same category
     for (const serviceStore of serviceStores) {
       for (const { categoryId, category, items } of serviceStore.menu) {
-        if (menu[category]) {
-          menu[category].categoryIds[serviceStore.service] = categoryId;
-          for (const item of items) {
-            if (menu[category].items[item.name]) {
-              menu[category].items[item.name].prices[serviceStore.service] =
-                item.price;
-              menu[category].items[item.name].ids[serviceStore.service] =
-                item.id;
-            }
-            // if item does not already exist, add it
-            else {
-              addItemToMenu({
-                categoryItems: menu[category].items,
-                service: serviceStore.service,
-                item: item,
-              });
-            }
-          }
-          // if category does not already exist, add it
-        } else {
+        // if category does not already exist, add it
+        if (!menu[category]) {
           addCategoryToMenu({
             category: { id: categoryId, name: category },
             menu: menu,
             items: {},
             service: serviceStore.service,
           });
+        }
+        menu[category].categoryIds[serviceStore.service] = categoryId;
+        for (const item of items) {
+          if (menu[category].items[item.name]) {
+            menu[category].items[item.name].prices[serviceStore.service] =
+              item.price;
+            menu[category].items[item.name].ids[serviceStore.service] = item.id;
+          }
+          // if item does not already exist, add it
+          else {
+            addItemToMenu({
+              categoryItems: menu[category].items,
+              service: serviceStore.service,
+              item: item,
+            });
+          }
         }
       }
     }
