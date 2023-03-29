@@ -111,7 +111,7 @@ const parseGrubhubStore = (storeData) => {
   };
 };
 
-/*Parse DoorDash stire data for mobile API
+/*Parse DoorDash store data for mobile API
  * @param {Object} storeData the store data to parse
  * @return {Object} parsed store information
  */
