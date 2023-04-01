@@ -2,8 +2,6 @@ import { env } from "node:process";
 import { v4 as uuidv4 } from "uuid";
 import jwt_decode from "jwt-decode";
 import fetch from "node-fetch";
-import puppeteer from "puppeteer";
-import { load } from "cheerio";
 import Service from "./Service.mjs";
 
 class Doordash extends Service {
@@ -204,7 +202,7 @@ class Doordash extends Service {
     return await (
       await this.callServiceAPI(async () => {
         let endpoint = new URL(
-          "https://consumer-mobile-bff.doordash.com/v3/search"
+          "https://consumer-mobile-bff.doordash.com/v3/feed/search"
         );
         const params = new URLSearchParams({
           query: query,
@@ -217,9 +215,9 @@ class Doordash extends Service {
         return fetch(endpoint.toString(), {
           method: "GET",
           headers: {
-            "client-version": "ios v4.41.2 b30357.210623",
-            "user-agent":
-              "DoordashConsumer/4.41.2 (iPhone; iOS 13.3.1; Scale/3.0)",
+            "x-facets-version": "3.0.1",
+            "client-version": "android v15.92.12 b15092129",
+            "user-agent": "DoorDashConsumer/Android 15.92.12",
             "x-experience-id": "doordash",
             "x-support-delivery-fee-sort": "true",
             "x-support-partner-dashpass": "true",
@@ -234,42 +232,70 @@ class Doordash extends Service {
       })
     ).json();
   }
+
+  /* Get store infomation
+   * @param {String} storeId of the store
+   * @return {Object} store data
+   */
+  async getStore(storeId) {
+    return await (
+      await this.callServiceAPI(async () =>
+        fetch(`https://consumer-mobile-bff.doordash.com/v2/stores/${storeId}`, {
+          method: "GET",
+          headers: {
+            "x-facets-feature-save-for-later-items": "false",
+            "x-store-dietary-tagging-enabled": "false",
+            authorization: `JWT ${(await this.getToken()).accessToken}`,
+            "accept-language": "en-US",
+            "client-version": "android v15.92.12 b15092129",
+            "user-agent": "DoorDashConsumer/Android 15.92.12",
+            "x-experience-id": "doordash",
+            "x-support-partner-dashpass": "true",
+            "dd-user-locale": "en-US",
+            "x-bff-error-format": "v2",
+          },
+        })
+      )
+    ).json();
+  }
+
   /*
+   * Depricated over mobile API
    * Get store Menu
    * @param {String} storeID of relevant store
    * @return {Object} data
    * @return {Object} data.info store information
    * @return {Object} data.menu store menu
    */
-  async getStore(storeID) {
-    const browser = await puppeteer.launch();
-    const page = await browser.newPage();
-    await page.setUserAgent(
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"
-    );
-    await page.goto("https://www.doordash.com/store/" + storeID + "/");
+  //async getStore(storeID) {
+  //  const browser = await puppeteer.launch();
+  //  const page = await browser.newPage();
+  //  await page.setUserAgent(
+  //    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"
+  //  );
+  //  await page.goto("https://www.doordash.com/store/" + storeID + "/");
 
-    const pageContent = await page.content();
-    const storeHtml = load(pageContent);
-    const scripts = storeHtml('script[type="application/ld+json"]');
+  //  const pageContent = await page.content();
+  //  const storeHtml = load(pageContent);
+  //  const scripts = storeHtml('script[type="application/ld+json"]');
 
-    const scriptTexts = [];
-    scripts.each(function () {
-      const scriptText = storeHtml(this).html().replace("</script>", "");
-      try {
-        JSON.parse(scriptText);
-      } catch (e) {
-        console.error("Error: Data is NOT a JSON");
-      }
-      scriptTexts.push(scriptText);
-    });
-    setTimeout(async () => {
-      await browser.close();
-    });
-    return {
-      info: JSON.parse(scriptTexts[0]),
-      menu: JSON.parse(scriptTexts[2]),
-    };
-  }
+  //  const scriptTexts = [];
+  //  scripts.each(function () {
+  //    const scriptText = storeHtml(this).html().replace("</script>", "");
+  //    try {
+  //      JSON.parse(scriptText);
+  //    } catch (e) {
+  //      console.error("Error: Data is NOT a JSON");
+  //    }
+  //    scriptTexts.push(scriptText);
+  //  });
+  //  setTimeout(async () => {
+  //    await browser.close();
+  //  });
+  //  return {
+  //    info: JSON.parse(scriptTexts[0]),
+  //    menu: JSON.parse(scriptTexts[2]),
+  //  };
+  //}
 }
 export default Doordash;
