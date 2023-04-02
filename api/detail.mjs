@@ -47,20 +47,28 @@ const parsePostmatesStore = (storeData) => {
       zipCode: location.postalCode,
       country: location.country,
     },
-    menu: catalogSectionsMap[sections[0].uuid].map((catalogSection) => ({
-      categoryId: catalogSection.catalogSectionUUID,
-      category: catalogSection.payload.standardItemsPayload.title.text,
-      items: catalogSection.payload.standardItemsPayload.catalogItems.map(
-        (item) => ({
-          id: item.uuid,
-          name: item.title,
-          description: item.itemDescription,
-          price: item.price,
-          image: item.imageUrl,
-          subsectionId: item.subsectionUuid,
-        })
-      ),
-    })),
+    menu: catalogSectionsMap[sections[0].uuid].reduce(
+      (accCategory, catalogSection) => {
+        if (catalogSection.type == "VERTICAL_GRID") {
+          accCategory.push({
+            categoryId: catalogSection.catalogSectionUUID,
+            category: catalogSection.payload.standardItemsPayload.title.text,
+            items: catalogSection.payload.standardItemsPayload.catalogItems.map(
+              (item) => ({
+                id: item.uuid,
+                name: item.title,
+                description: item.itemDescription,
+                price: item.price,
+                image: item.imageUrl,
+                subsectionId: item.subsectionUuid,
+              })
+            ),
+          });
+        }
+        return accCategory;
+      },
+      []
+    ),
   };
 };
 
@@ -93,7 +101,9 @@ const parseGrubhubStore = (storeData) => {
             name: name,
             description: description,
             price: price.amount,
-            image: `${media_image.base_url}${media_image.public_id}`,
+            image: media_image
+              ? `${media_image.base_url}${media_image.public_id}`
+              : "",
           })
         ),
       })
@@ -101,57 +111,220 @@ const parseGrubhubStore = (storeData) => {
   };
 };
 
-/*Parse DoorDash store data
+/*Parse DoorDash store data for mobile API
  * @param {Object} storeData the store data to parse
  * @return {Object} parsed store information
  */
 const parseDoorDashStore = (storeData) => {
-  const { info, menu } = storeData;
-  return {
-    restarauntName: info.name,
-    image: info.image[0],
-    logo: info.image[1],
-    location: {
-      streetAddress: info.address.streetAddress,
-      city: info.address.addressLocality,
-      state: info.address.addressRegion,
-      country: info.address.addressCountry,
-    },
-    coordinates: {
-      latitude: info.geo.latitude,
-      longitude: info.geo.longitude,
-    },
-    menu: menu.hasMenuSection[0].map((category) => ({
-      categoryName: category.name,
-      items: category.hasMenuItem.map((item) => ({
-        name: item.name,
-        price: item.offers.price,
-      })),
-    })),
+  let store = { menu: [] };
+
+  for (const module of storeData.display_modules) {
+    if (module.type == "store_header") {
+      const {
+        data: {
+          id,
+          name,
+          header_image: { url },
+          address: { street, city, display_address, country_shortname },
+        },
+      } = module;
+
+      store.id = id;
+      store.name = name;
+      store.image = url;
+      store.location = {
+        streetAddress: street,
+        city: city,
+        zipCode: display_address.split(",")[2].split(" ")[1],
+        country: country_shortname,
+      };
+    }
+    if (module.type == "menu_book") {
+      store.hours = module.data.menus[0].open_hours;
+    }
+    if (module.type == "item_list") {
+      const {
+        data: { name, content },
+      } = module;
+
+      store.menu.push({
+        categoryId: module.id,
+        category: name,
+        items: content.map(
+          ({ id, name, description, display_price, image }) => ({
+            id: id,
+            name: name,
+            description,
+            price: +display_price.replace("$", "") * 100,
+            image: image.url,
+          })
+        ),
+      });
+    }
+  }
+
+  return store;
+};
+
+/*Parse DoorDash store data for web crawler
+ * @param {Object} storeData the store data to parse
+ * @return {Object} parsed store information
+ */
+//const parseDoorDashStore = (storeData) => {
+//  const { info, menu } = storeData;
+//  return {
+//    restarauntName: info.name,
+//    image: info.image[0],
+//    logo: info.image[1],
+//    location: {
+//      streetAddress: info.address.streetAddress,
+//      city: info.address.addressLocality,
+//      state: info.address.addressRegion,
+//      country: info.address.addressCountry,
+//    },
+//    coordinates: {
+//      latitude: info.geo.latitude,
+//      longitude: info.geo.longitude,
+//    },
+//    menu: menu.hasMenuSection[0].map((category) => ({
+//      categoryName: category.name,
+//      items: category.hasMenuItem.map((item) => ({
+//        name: item.name,
+//        price: item.offers.price,
+//      })),
+//    })),
+//  };
+//};
+
+/* Add category to menu
+ * @param {Object} category
+ * @param {String} category.name the name of the category
+ * @param {String} category.id the id of the cateogry
+ * @param {Object} menu to add category to
+ * @param {Object} items to add to category
+ * @param {String} service name of default / first service
+ */
+const addCategoryToMenu = ({ category, menu, items, service }) => {
+  menu[category.name] = {
+    categoryId: category.id,
+    categoryIds: { [service]: category.id },
+    category: category.name,
+    items: items,
   };
 };
-/*Get detail store information
- * @param {String} service the name of the service the store belongs to
- * @param {String} storeId the id of the store
+
+/* Add item to menu
+ * @param {Object} categoryItems cateogry items to add item to
+ * @param {Objet} item to add
+ * @param {String} service name of default / first service
+ */
+const addItemToMenu = ({ categoryItems, item, service }) => {
+  categoryItems[item.name] = {
+    id: item.id,
+    name: item.name,
+    description: item.description,
+    prices: { [service]: item.price },
+    image: item.image,
+    subsectionId: item.subsectionId,
+    ids: { [service]: item.id },
+  };
+};
+
+/*Get detail store information for the specified services
+ * @param {Array} storeIds objects with services and corresponding
+ * store ids ex: {"postmates": "id"}
  * @return {Object} store information
  */
-const detailStore = async ({ service, storeId }) => {
+const detailStore = async (serviceIds) => {
   const services = {
-    postmates: Postmates,
-    grubhub: Grubhub,
-    doordash: Doordash,
+    postmates: { instance: Postmates, parser: parsePostmatesStore },
+    grubhub: { instance: Grubhub, parser: parseGrubhubStore },
+    doordash: { instance: Doordash, parser: parseDoorDashStore },
   };
-  const serviceInstance = new services[service]();
-  const store = await serviceInstance.getStore(storeId);
 
-  switch (service) {
-    case "postmates":
-      return parsePostmatesStore(store);
-    case "grubhub":
-      return parseGrubhubStore(store);
-    case "doordash":
-      return parseDoorDashStore(store);
-  }
+  return Promise.all(
+    serviceIds.reduce((accServices, { service, id }) => {
+      if (id && id != "null") {
+        accServices.push(
+          new services[service].instance().getStore(id).then((store) => ({
+            service: service,
+            ...services[service].parser(store),
+          }))
+        );
+      }
+      return accServices;
+    }, [])
+  ).then((serviceStores) => {
+    let menu = {};
+
+    const defaultService = serviceStores[0];
+
+    for (const { category, categoryId, items } of defaultService.menu) {
+      addCategoryToMenu({
+        category: { id: categoryId, name: category },
+        menu: menu,
+        items: {},
+        service: defaultService.service,
+      });
+      for (const item of items) {
+        addItemToMenu({
+          categoryItems: menu[category].items,
+          service: defaultService.service,
+          item: item,
+        });
+      }
+    }
+
+    serviceStores.shift();
+
+    // merging menu items of the same category
+    for (const serviceStore of serviceStores) {
+      for (const { categoryId, category, items } of serviceStore.menu) {
+        // if category does not already exist, add it
+        if (!menu[category]) {
+          addCategoryToMenu({
+            category: { id: categoryId, name: category },
+            menu: menu,
+            items: {},
+            service: serviceStore.service,
+          });
+        }
+        menu[category].categoryIds[serviceStore.service] = categoryId;
+        for (const item of items) {
+          if (menu[category].items[item.name]) {
+            menu[category].items[item.name].prices[serviceStore.service] =
+              item.price;
+            menu[category].items[item.name].ids[serviceStore.service] = item.id;
+          }
+          // if item does not already exist, add it
+          else {
+            addItemToMenu({
+              categoryItems: menu[category].items,
+              service: serviceStore.service,
+              item: item,
+            });
+          }
+        }
+      }
+    }
+
+    // removing application specific categories
+    // postmates
+    delete menu["Picked for you"];
+    // flattening hashmaps as arrays
+
+    return {
+      id: defaultService.id,
+      name: defaultService.name,
+      image: defaultService.image,
+      hours: defaultService.hours,
+      location: defaultService.location,
+      menu: Object.values(menu).map((category) => ({
+        ...category,
+        items: Object.values(category.items),
+      })),
+    };
+  });
 };
 
 export { detailLocation, detailStore };

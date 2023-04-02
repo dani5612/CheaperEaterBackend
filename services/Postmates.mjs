@@ -1,6 +1,5 @@
 import { env } from "node:process";
 import fetch from "node-fetch";
-import { HTTPResponseError } from "../errors/http.mjs";
 import Service from "./Service.mjs";
 
 class Postmates extends Service {
@@ -28,20 +27,15 @@ class Postmates extends Service {
    * @return {Array} of autocomplete result
    */
   async getLocationAutocomplete(query) {
-    const res = await fetch(
-      "https://postmates.com/api/getLocationAutocompleteV1",
-      {
-        method: "POST",
-        headers: this.commonHeaders,
-        body: JSON.stringify({ query: query }),
-      }
-    );
-
-    if (res.ok) {
-      return await res.json();
-    } else {
-      throw new HTTPResponseError(res);
-    }
+    return await (
+      await this.callServiceAPI(() =>
+        fetch("https://postmates.com/api/getLocationAutocompleteV1", {
+          method: "POST",
+          headers: this.commonHeaders,
+          body: JSON.stringify({ query: query }),
+        })
+      )
+    ).json();
   }
 
   /* Get detailed location information
@@ -49,37 +43,37 @@ class Postmates extends Service {
    * @param {Object} location details
    */
   async getLocationDetails(locationData) {
-    const res = await fetch("https://postmates.com/api/getLocationDetailsV1", {
-      method: "POST",
-      headers: this.commonHeaders,
-      body: JSON.stringify(locationData),
-    });
-    if (res.ok) {
-      return await res.json();
-    } else {
-      throw new HTTPResponseError(res);
-    }
+    return await (
+      await this.callServiceAPI(() =>
+        fetch("https://postmates.com/api/getLocationDetailsV1", {
+          method: "POST",
+          headers: this.commonHeaders,
+          body: JSON.stringify(locationData),
+        })
+      )
+    ).json();
   }
 
   /* Get detailed delivery location information
-   * @param {Object} locationData location data from getLocationAutocomplete
-   * @param {Object} location details
+   * @param {Object} payload
+   * @param {String} payload.id location id (placeId)
+   * @param {String} payload.provider location provider
+   * @return {Object} detailed location data
    */
   async getDeliveryLocationDetails({ id, provider }) {
-    const res = await fetch("https://postmates.com/api/getDeliveryLocationV1", {
-      method: "POST",
-      headers: this.commonHeaders,
-      body: JSON.stringify({
-        placeId: id,
-        provider: provider,
-        source: "manual_auto_complete",
-      }),
-    });
-    if (res.ok) {
-      return await res.json();
-    } else {
-      throw new HTTPResponseError(res);
-    }
+    return await (
+      await this.callServiceAPI(() =>
+        fetch("https://postmates.com/api/getDeliveryLocationV1", {
+          method: "POST",
+          headers: this.commonHeaders,
+          body: JSON.stringify({
+            placeId: id,
+            provider: provider,
+            source: "manual_auto_complete",
+          }),
+        })
+      )
+    ).json();
   }
 
   /*Replace the domain of cookies to the applicaiton domain
@@ -138,89 +132,89 @@ class Postmates extends Service {
    * @return {Array} session cookies containing location info
    */
   async setLocation(locationDetails) {
-    const res = await fetch("https://postmates.com/api/setTargetLocationV1", {
-      method: "POST",
-      headers: {
-        authority: "postmates.com",
-        accept: "*/*",
-        "accept-language": "en-US,en;q=0.6",
-        "content-type": "application/json",
-        cookie: `uev2.loc=${this.jsonToCookie(locationDetails)}`,
-        origin: "https://postmates.com",
-        referer: "https://postmates.com/",
-        "sec-fetch-dest": "empty",
-        "sec-fetch-mode": "cors",
-        "sec-fetch-site": "same-origin",
-        "sec-gpc": "1",
-        "user-agent":
-          "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
-        "x-csrf-token": "x",
-      },
-      body: "{}",
-    });
-
-    if (res.ok) {
-      return {
-        responseCookies: this.cookiesToJson(res.headers.raw()["set-cookie"]),
-      };
-    } else {
-      throw new HTTPResponseError(res);
-    }
+    return {
+      responseCookies: this.cookiesToJson(
+        (
+          await this.callServiceAPI(() =>
+            fetch("https://postmates.com/api/setTargetLocationV1", {
+              method: "POST",
+              headers: {
+                authority: "postmates.com",
+                accept: "*/*",
+                "accept-language": "en-US,en;q=0.6",
+                "content-type": "application/json",
+                cookie: `uev2.loc=${this.jsonToCookie(locationDetails)}`,
+                origin: "https://postmates.com",
+                referer: "https://postmates.com/",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "sec-gpc": "1",
+                "user-agent":
+                  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
+                "x-csrf-token": "x",
+              },
+              body: "{}",
+            })
+          )
+        ).headers.raw()["set-cookie"]
+      ),
+    };
   }
 
   /* Search query
-   * @param {String} query the query to search
-   * @param {Object} cookies containing location data
+   * @param {Object} payload
+   * @param {String} payload.query the query to search
+   * @param {Object} payload.cookies request cookies containing location data
    * @return {Object} the search result or HTTPResponseError
    */
   async search({ query, cookies }) {
-    const res = await fetch("https://postmates.com/api/getFeedV1", {
-      method: "POST",
-      headers: {
-        authority: "postmates.com",
-        accept: "*/*",
-        "accept-language": "en-US,en;q=0.8",
-        "content-type": "application/json",
-        origin: "https://postmates.com",
-        "sec-fetch-dest": "empty",
-        "sec-fetch-mode": "cors",
-        "sec-fetch-site": "same-origin",
-        "sec-gpc": "1",
-        "user-agent":
-          "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
-        "x-csrf-token": "x",
-        cookie: this.CookiesObjectToString(cookies),
-      },
-      body: JSON.stringify({
-        userQuery: query,
-        date: "",
-        startTime: 0,
-        endTime: 0,
-        carouselId: "",
-        sortAndFilters: [],
-        marketingFeedType: "",
-        billboardUuid: "",
-        feedProvider: "",
-        promotionUuid: "",
-        targetingStoreTag: "",
-        venueUUID: "",
-        selectedSectionUUID: "",
-        favorites: "",
-        vertical: "ALL",
-        searchSource: "SEARCH_SUGGESTION",
-        keyName: "",
-      }),
-    });
-    if (res.ok) {
-      return {
-        data: await res.json(),
-        resCookies: {
-          ...this.cookiesToJson(res.headers.raw()["set-cookie"]),
+    const res = await this.callServiceAPI(() =>
+      fetch("https://postmates.com/api/getFeedV1", {
+        method: "POST",
+        headers: {
+          authority: "postmates.com",
+          accept: "*/*",
+          "accept-language": "en-US,en;q=0.8",
+          "content-type": "application/json",
+          origin: "https://postmates.com",
+          "sec-fetch-dest": "empty",
+          "sec-fetch-mode": "cors",
+          "sec-fetch-site": "same-origin",
+          "sec-gpc": "1",
+          "user-agent":
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
+          "x-csrf-token": "x",
+          cookie: this.CookiesObjectToString(cookies),
         },
-      };
-    } else {
-      throw new HTTPResponseError(res);
-    }
+        body: JSON.stringify({
+          userQuery: query,
+          date: "",
+          startTime: 0,
+          endTime: 0,
+          carouselId: "",
+          sortAndFilters: [],
+          marketingFeedType: "",
+          billboardUuid: "",
+          feedProvider: "",
+          promotionUuid: "",
+          targetingStoreTag: "",
+          venueUUID: "",
+          selectedSectionUUID: "",
+          favorites: "",
+          vertical: "ALL",
+          searchSource: "SEARCH_SUGGESTION",
+          keyName: "",
+        }),
+      })
+    );
+
+    return {
+      data: await res.json(),
+      responseCookies: {
+        ...this.cookiesToJson(res.headers.raw()["set-cookie"]),
+      },
+    };
   }
 
   /* Get store information
@@ -229,33 +223,32 @@ class Postmates extends Service {
    * menu[category[items[name, description, price, image]]]], or HTTPResponseError
    */
   async getStore(restarauntID) {
-    const res = await fetch("https://postmates.com/api/getStoreV1", {
-      method: "POST",
-      headers: {
-        authority: "postmates.com",
-        accept: "*/*",
-        "content-type": "application/json",
-        dnt: "1",
-        "x-csrf-token": "x",
-      },
-      body: JSON.stringify({ storeUuid: restarauntID }),
-    });
-    if (res.ok) {
-      return await res.json();
-    } else {
-      throw new HTTPResponseError(res);
-    }
+    return await (
+      await this.callServiceAPI(() =>
+        fetch("https://postmates.com/api/getStoreV1", {
+          method: "POST",
+          headers: {
+            authority: "postmates.com",
+            accept: "*/*",
+            "content-type": "application/json",
+            dnt: "1",
+            "x-csrf-token": "x",
+          },
+          body: JSON.stringify({ storeUuid: restarauntID }),
+        })
+      )
+    ).json();
   }
 
   /*Autocomplete search results
-   * @param {String} query to search
-   * @param cookies {Object} cookies to use for search
+   * @param {Object} payload
+   * @param {String} payload.query to search
+   * @param {Object} payload.cookies request cookies to use for search
    * @return {Object} raw search results and response cookies
    */
   async autocompleteSearch({ query, cookies }) {
-    const res = await fetch(
-      "https://postmates.com/api/getSearchSuggestionsV1",
-      {
+    const res = await this.callServiceAPI(() =>
+      fetch("https://postmates.com/api/getSearchSuggestionsV1", {
         method: "POST",
         headers: {
           authority: "postmates.com",
@@ -279,16 +272,13 @@ class Postmates extends Service {
           endTime: 0,
           vertical: "ALL",
         }),
-      }
+      })
     );
-    if (res.ok) {
-      return {
-        data: await res.json(),
-        responseCookies: this.cookiesToJson(res.headers.raw()["set-cookie"]),
-      };
-    } else {
-      throw new HTTPResponseError(res);
-    }
+
+    return {
+      data: await res.json(),
+      responseCookies: this.cookiesToJson(res.headers.raw()["set-cookie"]),
+    };
   }
 }
 export default Postmates;

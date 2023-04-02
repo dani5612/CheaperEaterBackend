@@ -9,7 +9,12 @@ detailRouter.post("/location", async (req, res) => {
 
 detailRouter.post("/store", async (req, res) => {
   res.json(
-    await detailStore({ service: req.body.service, storeId: req.body.storeId })
+    await detailStore(
+      Object.keys(req.body).map((key) => ({
+        id: req.body[key],
+        service: key,
+      }))
+    )
   );
 });
 

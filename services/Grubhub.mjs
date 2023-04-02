@@ -1,7 +1,5 @@
 import { env } from "node:process";
 import fetch from "node-fetch";
-
-import { HTTPResponseError } from "../errors/http.mjs";
 import Service from "./Service.mjs";
 
 class Grubhub extends Service {
@@ -59,24 +57,32 @@ class Grubhub extends Service {
    * @return {Object} newly create token data
    */
   async createNewToken() {
-    const res = await fetch("https://api-gtm.grubhub.com/auth", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        tracestate: "@nr=0-2-0-0-cfd18ff8408d2318--0--1674429822078",
-        "x-px-authorization": "4",
-        accept: "*/*",
-        "accept-language": "en-us",
-        "user-agent": "GrubHub/2022.32 (iPhone; iOS 13.3.1; Scale/3.00)",
-        vary: "Accept-Encoding",
-      },
-      body: JSON.stringify({
-        brand: "GRUBHUB",
-        client_id: this.clientId,
-        scope: "anonymous",
-      }),
-    });
-    return await this.updateToken(this.parseTokenData(await res.json()));
+    return await this.updateToken(
+      this.parseTokenData(
+        await (
+          await this.callServiceAPI(() =>
+            fetch("https://api-gtm.grubhub.com/auth", {
+              method: "POST",
+              headers: {
+                "content-type": "application/json",
+                tracestate: "@nr=0-2-0-0-cfd18ff8408d2318--0--1674429822078",
+                "x-px-authorization": "4",
+                accept: "*/*",
+                "accept-language": "en-us",
+                "user-agent":
+                  "GrubHub/2022.32 (iPhone; iOS 13.3.1; Scale/3.00)",
+                vary: "Accept-Encoding",
+              },
+              body: JSON.stringify({
+                brand: "GRUBHUB",
+                client_id: this.clientId,
+                scope: "anonymous",
+              }),
+            })
+          )
+        ).json()
+      )
+    );
   }
 
   /* Refresh authentication tokens and store new token data in database
@@ -84,75 +90,83 @@ class Grubhub extends Service {
    * @return {Object} the object containing the new token data
    */
   async refreshAuth(refreshToken) {
-    const res = await fetch("https://api-gtm.grubhub.com/auth/refresh", {
-      method: "POST",
-      headers: {
-        accept: "*/*",
-        "accept-language": "en-us",
-        "content-type": "application/json",
-        "user-agent": "GrubHub/2022.32 (iPhone; iOS 13.3.1; Scale/3.00)",
-        vary: "Accept-Encoding",
-        "x-newrelic-id": "VQQDVlBVGwoBVVRSBQkO",
-        "x-px-authorization": "4",
-        "x-px-bypass-reason":
-          "An%20SSL%20error%20has%20occurred%20and%20a%20secure%20connection%20to%20the%20server%20cannot%20be%20made.",
-        "x-px-original-token": env.GRUBHUB_XPX_TOKEN,
-      },
-      body: JSON.stringify({
-        client_id: this.clientId,
-        scope: "anonymous",
-        brand: "GRUBHUB",
-        refresh_token: refreshToken,
-      }),
-    });
-
-    const tokenData = this.parseTokenData(await res.json());
-    await this.updateToken(tokenData);
-    return tokenData;
+    return await this.updateToken(
+      this.parseTokenData(
+        await (
+          await this.callServiceAPI(() =>
+            fetch("https://api-gtm.grubhub.com/auth/refresh", {
+              method: "POST",
+              headers: {
+                accept: "*/*",
+                "accept-language": "en-us",
+                "content-type": "application/json",
+                "user-agent":
+                  "GrubHub/2022.32 (iPhone; iOS 13.3.1; Scale/3.00)",
+                vary: "Accept-Encoding",
+                "x-newrelic-id": "VQQDVlBVGwoBVVRSBQkO",
+                "x-px-authorization": "4",
+                "x-px-bypass-reason":
+                  "An%20SSL%20error%20has%20occurred%20and%20a%20secure%20connection%20to%20the%20server%20cannot%20be%20made.",
+                "x-px-original-token": env.GRUBHUB_XPX_TOKEN,
+              },
+              body: JSON.stringify({
+                client_id: this.clientId,
+                scope: "anonymous",
+                brand: "GRUBHUB",
+                refresh_token: refreshToken,
+              }),
+            })
+          )
+        ).json()
+      )
+    );
   }
 
   /* Search query
-   * @param {String} query the query to search
+   * @param {Object} payload
+   * @param {String} payload.query the query to search
+   * @param {String} payload.location.latitude location latitude
+   * @param {String} payload.location.longitude location longitude
    * @return {Object} the search result or HTTPResponseError
    */
   async search({ query, location }) {
-    let endpoint = new URL("https://api-gtm.grubhub.com/restaurants/search");
-    const params = new URLSearchParams({
-      orderMethod: "delivery",
-      locationMode: "DELIVERY",
-      facetSet: "umamiV6",
-      pageSize: 20,
-      hideHateos: true,
-      searchMetrics: true,
-      queryText: query,
-      location: `POINT(${location.longitude} ${location.latitude})`,
-      preciseLocation: true,
-      includeOffers: true,
-      sortSetId: "umamiv3",
-      sponsoredSize: 3,
-      countOmittingTimes: true,
-    });
+    return await (
+      await this.callServiceAPI(async () => {
+        let endpoint = new URL(
+          "https://api-gtm.grubhub.com/restaurants/search"
+        );
+        const params = new URLSearchParams({
+          orderMethod: "delivery",
+          locationMode: "DELIVERY",
+          facetSet: "umamiV6",
+          pageSize: 20,
+          hideHateos: true,
+          searchMetrics: true,
+          queryText: query,
+          location: `POINT(${location.longitude} ${location.latitude})`,
+          preciseLocation: true,
+          includeOffers: true,
+          sortSetId: "umamiv3",
+          sponsoredSize: 3,
+          countOmittingTimes: true,
+        });
 
-    endpoint.search = params;
+        endpoint.search = params;
 
-    const res = await fetch(endpoint.toString(), {
-      method: "GET",
-      headers: {
-        "content-type": "application/json",
-        "x-px-authorization": env.GRUBHUB_XPX_TOKEN,
-        accept: "*/*",
-        authorization: `Bearer ${(await this.getToken()).accessToken}`,
-        "accept-language": "en-us",
-        "user-agent": "GrubHub/2022.32 (iPhone; iOS 13.3.1; Scale/3.00)",
-        vary: "Accept-Encoding",
-      },
-    });
-
-    if (res.ok) {
-      return await res.json();
-    } else {
-      throw new HTTPResponseError(res);
-    }
+        return fetch(endpoint.toString(), {
+          method: "GET",
+          headers: {
+            "content-type": "application/json",
+            "x-px-authorization": env.GRUBHUB_XPX_TOKEN,
+            accept: "*/*",
+            authorization: `Bearer ${(await this.getToken()).accessToken}`,
+            "accept-language": "en-us",
+            "user-agent": "GrubHub/2022.32 (iPhone; iOS 13.3.1; Scale/3.00)",
+            vary: "Accept-Encoding",
+          },
+        });
+      })
+    ).json();
   }
 
   /*Get store information. Wraps web API
@@ -160,45 +174,43 @@ class Grubhub extends Service {
    * @return {Object} object containing store information
    */
   async getStore(storeId) {
-    let endpoint = new URL(
-      `https://api-gtm.grubhub.com/restaurants/${storeId}`
-    );
+    return await (
+      await this.callServiceAPI(async () => {
+        let endpoint = new URL(
+          `https://api-gtm.grubhub.com/restaurants/${storeId}`
+        );
 
-    const params = new URLSearchParams({
-      hideChoiceCategories: true,
-      version: 4,
-      variationId: "rtpFreeItems",
-      orderType: "standard",
-      hideUnavailableMenuItems: true,
-      hideMenuItems: false,
-      locationMode: "delivery",
-    });
+        const params = new URLSearchParams({
+          hideChoiceCategories: true,
+          version: 4,
+          variationId: "rtpFreeItems",
+          orderType: "standard",
+          hideUnavailableMenuItems: true,
+          hideMenuItems: false,
+          locationMode: "delivery",
+        });
 
-    endpoint.search = params;
+        endpoint.search = params;
 
-    const res = await fetch(endpoint, {
-      method: "GET",
-      headers: {
-        authority: "api-gtm.grubhub.com",
-        accept: "application/json",
-        "accept-language": "en-US,en;q=0.5",
-        authorization: `Bearer ${(await this.getToken()).accessToken}`,
-        origin: "https://www.grubhub.com",
-        referer: "https://www.grubhub.com/",
-        "sec-fetch-dest": "empty",
-        "sec-fetch-mode": "cors",
-        "sec-fetch-site": "same-site",
-        "sec-gpc": "1",
-        "user-agent":
-          "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Mobile Safari/537.36",
-      },
-    });
-
-    if (res.ok) {
-      return await res.json();
-    } else {
-      throw new HTTPResponseError(res);
-    }
+        return fetch(endpoint, {
+          method: "GET",
+          headers: {
+            authority: "api-gtm.grubhub.com",
+            accept: "application/json",
+            "accept-language": "en-US,en;q=0.5",
+            authorization: `Bearer ${(await this.getToken()).accessToken}`,
+            origin: "https://www.grubhub.com",
+            referer: "https://www.grubhub.com/",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "same-site",
+            "sec-gpc": "1",
+            "user-agent":
+              "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Mobile Safari/537.36",
+          },
+        });
+      })
+    ).json();
   }
 }
 
